@@ -11,18 +11,22 @@
 Each task tracks three stages:
 
 1. **Implemented:** Code written, committed (record commit SHA)
-2. **Verified:** Tests pass, build succeeds (record command output)
-3. **Reviewed:** Independent verification confirms acceptance criteria met (automated test suite or human check)
+2. **Verified (self-tested):** the implementing worker ran the checks: tests, build, typecheck, lint. Record the exact commands, versions, results, and skipped counts. Running your own tests is verification, not independent review.
+3. **Reviewed:** an independent review by someone other than the implementer (for example Firstmate or the user). Record the reviewer, the date, the verdict, and **the revision (commit SHA) that was reviewed**. A passing test suite is Verified evidence, not Reviewed evidence, however thorough it is.
+
+**Delivery states (added 2026-11-14, see `CONTRIBUTING.md`):** two further states are kept distinct from the three above. **Pushed** = the commit is on the remote (record remote, branch, and the SHA read back from the server). **Merged** = the branch tip is contained in `main` (record the merge or fast-forward commit). Tasks 1-10 predate the extra fields; their pushed state is recorded in the execution records, and later tasks should add `- [ ] Pushed` and `- [ ] Merged` lines.
 
 **Format per task:**
 ```markdown
 **Status:**
 - [ ] Implemented (commit: <SHA>)
-- [ ] Verified (command: <output summary>)
-- [ ] Reviewed (evidence: <test output or reviewer confirmation>)
+- [ ] Verified (self-tested: <commands, versions, results, skipped counts>)
+- [ ] Reviewed (independent: <reviewer, date, verdict, revision reviewed>)
+- [ ] Pushed (<remote, branch, SHA read back from the server>)
+- [ ] Merged (<merge or fast-forward commit>)
 ```
 
-**Checkpoint boundaries:** Human approval required at phase boundaries (after tasks 7, 21, 24, 28, 30). Within a phase, "Reviewed" means independent verification (test suite run, not manual approval for every task).
+**Checkpoint boundaries:** Human approval required at phase boundaries (after Task 7, Task 21, **Task 23, which ends Phase 3 because Phase 3 runs 24 → 22 → 23**, Task 28, and Task 30). Within a phase, no individual task needs a manual human approval: the implementing worker records Implemented and Verified (self-tested) as each task is done. "Reviewed" is recorded only when an independent review has examined a stated revision. That review normally happens at the phase or milestone checkpoint (or at an earlier boundary the user sets), and one review may cover many tasks; record the same review evidence on each task it covers. A task that is not yet reviewed does not block the next task in the same phase.
 
 **Do not advance to next phase until human reviews phase checkpoint.**
 
@@ -361,7 +365,7 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 
 **Corrections to earlier evidence:** The cycle 3 completion report (`PLANNING-CYCLE3-COMPLETE.md`) gave `grep -c "^## Task" tasks/todo.md` with expected output 30. Run for real it prints 2, because task headings are level three. The correct command, `grep -c '^### Task' tasks/todo.md`, prints 30 (run 2026-11-14). That report is also dated 2026-11-07 although it cites 2026-11-14 reviews. It was not edited; this record supersedes it.
 
-**Record reconciliations made in this pass (review item 5, narrow):** `tasks/plan.md` no longer says "Implement multiple tasks in one commit"; the two checkpoint lists in this file now read "7, 21, 24, 28, 30". The remaining references to Task 31 in this file are historical notes about its consolidation into Task 18.
+**Record reconciliations made in this pass (review item 5, narrow):** `tasks/plan.md` no longer says "Implement multiple tasks in one commit"; the two checkpoint lists in this file now read "7, 21, 24, 28, 30". [Superseded: Phase 3 runs 24 → 22 → 23, so its boundary is Task 23; see the Task State Protocol and the later corrections.] The remaining references to Task 31 in this file are historical notes about its consolidation into Task 18.
 
 **Deliberately not changed (later-phase corrections from the review, to settle before those phases are authorized):** Task 10 database transport; Task 27 cursor and its reference to a removed importance score; the basic-feed versus full Spec 05 contract distinction; the Phase 3 execution order and the "checkpoint after task 24" phrasing. Task 17 also needs a Wrangler version decision, since `4.148.0` is not what the installed plugin pins.
 
@@ -382,6 +386,8 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 ---
 
 ## Phase 2: Early Working Path - Protected Markdown Import (Tasks 8-21)
+
+> **Scope note (2026-11-14):** the Phase 2 checkpoint verifies an **intermediate** API, not the final Spec 05 contract. `GET /feed` returns a basic list with `limit` and no `cursor` or `nextCursor`; cursor pagination and strategy-based ordering arrive in Phase 4 (Tasks 25-27). Passing the Phase 2 checkpoint does not mean every Spec 05 response, ordering, and pagination contract passes. Tasks 19-21 are checked against their own acceptance criteria only. The `X-API-Key` curl examples need an explicitly public local configuration; the private default requires the trusted Access identity.
 
 ### Task 8: Create `@recallfeed/database` with Neon client
 
@@ -410,7 +416,9 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 **Status:**
 - [x] Implemented (commit: `f07e34d`)
 - [x] Verified (2026-11-14, Node 22.23.3: `pnpm build` → exit 0 for both packages; `pnpm typecheck` → exit 0 (three configs: Worker code, Node scripts, tests); `pnpm lint` → exit 0. `createDb` is exercised in the Workers runtime by `driver.test.ts` and `schema.test.ts`. `@recallfeed/database` dependencies are `@neondatabase/serverless ^1.2.1` and `@recallfeed/core workspace:*` only; no pooling or ORM library.)
-- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+- [x] Reviewed (Firstmate independent review: `2026-11-14T163124Z-database.md` REQUEST CHANGES, then `2026-11-14T171500Z-database-corrections.md` APPROVE at `29538fb`; it independently reran lint, build, typecheck, and the no-database tests, ran SELECT-only live checks, and mutated the corrected files in an isolated copy. It did not rerun the destructive integration suite; that remains this project's own evidence)
+- [x] Pushed (`origin/main` = `29538fb9def2ac9717c5310ffd8da564a69a0112`, read back from the server 2026-11-14)
+- [ ] Merged (not applicable: committed directly to `main` before the phase-branch workflow; no branch to merge)
 
 **Deviations:** The factory is named `createDb` (with `DbClient`), as approved Spec 02 and Spec 07 name it; this task's text said `createDatabaseClient`. A `DatabaseEnv` type holds the `DATABASE_URL` binding. `tsx`, `@types/node`, `ws`, and `@types/ws` are dev tooling for the Node-only migration CLI; `tsx` and `@types/node` sit at the workspace root and `ws`/`@types/ws` in this package.
 
@@ -449,7 +457,9 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 **Status:**
 - [x] Implemented (commit: `f07e34d`)
 - [x] Verified against a real PostgreSQL 17.12, not a syntax check: the `pnpm db:migrate` CLI was run on a reset database. First run → `applied 001_initial.sql`, `done: 1 applied, 0 skipped`; second run → `skipped 001_initial.sql`, `done: 0 applied, 1 skipped`. Ground truth read with `psql` inside the container: `_schema_migrations` holds exactly `001_initial.sql`; tables are `_schema_migrations, feed_items, notes, review_events, sources`; 11 `*_idx` indexes exist; `notes_source_content_hash_idx` is `CREATE UNIQUE INDEX … (source_id, content_hash)`. A deliberately failing second migration (`CREATE TABLE should_not_exist …; SELECT * FROM table_that_does_not_exist`) was rejected, left no `should_not_exist` table and no tracking row. The CLI without `DATABASE_URL` exits 1 and changes nothing. The 12 unit tests in `migrate.test.ts` cover numeric ordering (`010` after `002`), malformed names, duplicate prefixes, skipping, and rollback.
-- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+- [x] Reviewed (Firstmate independent review: `2026-11-14T163124Z-database.md` REQUEST CHANGES, then `2026-11-14T171500Z-database-corrections.md` APPROVE at `29538fb`; it independently reran lint, build, typecheck, and the no-database tests, ran SELECT-only live checks, and mutated the corrected files in an isolated copy. It did not rerun the destructive integration suite; that remains this project's own evidence)
+- [x] Pushed (`origin/main` = `29538fb9def2ac9717c5310ffd8da564a69a0112`, read back from the server 2026-11-14)
+- [ ] Merged (not applicable: committed directly to `main` before the phase-branch workflow; no branch to merge)
 
 **Deviations and notes:** Spec 02 is internally inconsistent about ordering ("lexicographic" in the acceptance list, "numeric by prefix" in the algorithm); the runner sorts numerically, as the algorithm and the example in the spec require. `001_initial.sql` also contains `CREATE TABLE IF NOT EXISTS _schema_migrations` because the spec says both that the runner creates it and that `001` creates all five tables; the statement is idempotent. The runner uses a WebSocket `Client` session in Node. The HTTP `neon()` function does support non-interactive transactions (`sql.transaction([...])`), but it rejects a multi-statement string ("cannot insert multiple commands into a prepared statement") and cannot hold an interactive `BEGIN … COMMIT` across stateless calls (checked against PostgreSQL 17.12 on 2026-11-14); a migration file needs both. This wording was corrected after Firstmate's review. Files are `src/migrate.ts` (logic), `src/migrate-node.ts` and `src/migrate-cli.ts` (Node entry).
 
@@ -475,6 +485,7 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 - [ ] **Choose and document transport:**
   - Option A: `@neondatabase/serverless` client → local PostgreSQL via `postgresql://localhost:5432/recallfeed_test` (requires PostgreSQL server + Neon client's HTTP mode works locally)
   - Option B: `@neondatabase/serverless` client → authorized Neon test database via `postgresql://...neon.tech` (**authorization stop if cloud provisioning needed**)
+- **Selected 2026-11-14 (user-authorized, implemented in `f07e34d`, corrected in `1170b07`):** neither option as written. The transport is `@neondatabase/serverless` over HTTP to `ghcr.io/timowilhelm/local-neon-http-proxy` (pinned by digest) in front of a local PostgreSQL 17, run by Docker Compose under Colima; the URL host is `db.localtest.me`. An ordinary `localhost:5432` listener does not work with the HTTP client. No cloud resource is used; Option B stays unused.
 - [ ] **Note:** Neon's `neon(connectionString)` client uses HTTP internally; Option A requires local PostgreSQL + compatible setup, not just changing the URL scheme
 - [ ] `.env.test.example` created with `TEST_DATABASE_URL` placeholder
 - [ ] Test setup script: `packages/database/src/__tests__/setup.ts` runs migration on test DB
@@ -489,7 +500,9 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 **Status:**
 - [x] Implemented (commit: `f07e34d`)
 - [x] Verified (2026-11-14, see "Phase 2 database spike evidence" below)
-- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+- [x] Reviewed (Firstmate independent review: `2026-11-14T163124Z-database.md` REQUEST CHANGES, then `2026-11-14T171500Z-database-corrections.md` APPROVE at `29538fb`; it independently reran lint, build, typecheck, and the no-database tests, ran SELECT-only live checks, and mutated the corrected files in an isolated copy. It did not rerun the destructive integration suite; that remains this project's own evidence)
+- [x] Pushed (`origin/main` = `29538fb9def2ac9717c5310ffd8da564a69a0112`, read back from the server 2026-11-14)
+- [ ] Merged (not applicable: committed directly to `main` before the phase-branch workflow; no branch to merge)
 
 **Transport chosen:** Option A, refined. `@neondatabase/serverless` over HTTP to a local Neon-compatible proxy (`ghcr.io/timowilhelm/local-neon-http-proxy`, pinned by digest) in front of PostgreSQL 17.12, both run by Docker Compose under Colima. No cloud resources. An ordinary `postgresql://localhost:5432` listener is not enough; the proxy is what makes the HTTP client work.
 
@@ -585,6 +598,27 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 **Not verified / limits:** the `host`, `port`, and `database` fields I read from the driver's `Client` are the effective values for this driver version (1.2.1); a future driver version could change them, which gate 2's test would reveal. The proxy ignores the URL's port and database, so a live "wrong database" case cannot be produced through it; gate 3 is exercised with scripted sessions and with the marker removed live. No hosted-Neon, deployment, or cloud check. Wrangler `4.148.0` versus `4.162.0` and the later-phase plan wording (Task 27 cursor, Phase 3 order, basic-feed wording, `importMarkdown` JSDoc) are deliberately **not** changed in this pass.
 
 **Stop point:** correction pass complete, awaiting independent Firstmate review. The database commits are not pushed.
+
+---
+
+### Delivery and workflow state (2026-11-14)
+
+| Item | State | Evidence |
+|---|---|---|
+| Phase 1, Tasks 1-7 | implemented, self-tested, **independently reviewed**, **pushed** | Firstmate `2026-11-14T145842Z-phase1.md`; pushed in `4f0207b` |
+| Phase 2 database spike, Tasks 8-10 | implemented, self-tested, **independently reviewed**, **pushed** | Firstmate `2026-11-14T171500Z-database-corrections.md` APPROVE; `origin/main` = `29538fb9def2ac9717c5310ffd8da564a69a0112` |
+| Tasks 11-21 | **not started** | no source for them exists |
+| Workflow setup (this branch) | implemented, self-tested, **not reviewed, not pushed, not merged** | branch `chore/workflow-setup`; commits listed in its review request |
+
+**Repository:** https://github.com/pauxiel/recallfeed, private. **Remote baseline pushed:** a normal fast-forward `4f0207b..29538fb` after checking the destination, clean tree, reviewed HEAD, that remote `main` was an ancestor of HEAD, and that no unreviewed commit was included. No force, squash, rebase, reset, or history rewrite.
+
+**Workflow setup branch:** `chore/workflow-setup`, cut from `29538fb` with `treehouse get --lease --base main -b chore/workflow-setup --lease-holder recallfeed-kiro --json`. The workspace is a linked git worktree distinct from the primary checkout; dependencies were installed there with `pnpm install --frozen-lockfile` on Node 22.23.3 and pnpm 10.18.3 from `.nvmrc` and `packageManager`. See `CONTRIBUTING.md` for the workflow, and the review request on this branch for the actual workspace path, lease id, and commits.
+
+**Planning corrections made on this branch (focused edits, specs untouched):** the selected local PostgreSQL/proxy transport recorded in Task 10 and the plan; the direct Wrangler pin aligned to 4.162.0 in Task 17, the plan, the proposal, and the agent config; the intermediate-versus-final API scope stated in the Phase 2 header, the Phase 2 checkpoint, and the plan; the CPU-budget claim corrected in the `importMarkdown` JSDoc, with benchmark criteria added to Tasks 15 and 19; Task 27's cursor wording corrected to `reviewCount` with the full-ordering requirement and an explicit open decision on cursor shape; Phase 3 execution order 24 → 22 → 23 with the checkpoint after Task 23.
+
+**Not changed, and why:** the approved specifications are untouched. Three places in them still carry wording this pass corrected elsewhere, for the user or Firstmate to decide: `.kiro/specs/01-core-domain.md` line 231 (`importMarkdown` "within CPU budget via 100 KB size limit"), `.kiro/specs/03-connectors.md` line 145 (a code comment "100 KB for free-tier CPU budget safety"; line 314 of the same spec already says the cap is chosen conservatively), and `.kiro/steering/technology-decisions.md` line 26 ("approximately 3-6 ms CPU" is an unmeasured estimate). Spec 04's cursor still describes a single `sortKey`. Spec 05 states OpenNext's `^4.148.0` Wrangler peer range, which is accurate. `Task 5`'s original acceptance text still says Wrangler 4.148.0; Task 5 is complete and its deviations are recorded.
+
+**Known limits of this setup:** `treehouse.toml` sets only `base_branch = "main"`; Treehouse printed identical status with and without it, so the file is unexercised, and the key comes from `treehouse get --help`. The shared database means only one integration run at a time; this was checked by confirming zero other connections before running. Automatic supervisor notification now requires local configuration (`FM_HOME`), so the Kiro hook no longer notifies by itself until that is set.
 
 ---
 
@@ -751,6 +785,7 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] `content_hash` generated via SHA-256 of content
 - [ ] Register in `connectorRegistry`: `connectorRegistry.set("markdown", new MarkdownConnector())`
 - [ ] Tests parse sample markdown with frontmatter and code blocks
+- [ ] **CPU evidence, not assumption:** add an informational benchmark that logs measured Workers CPU time for representative sizes (for example 1 KB, 10 KB, 50 KB, 100 KB, with and without many fenced code blocks), per the project convention for CPU-sensitive operations. The figures in the steering document (about 3-6 ms for 100 KB) are an estimate until this runs. The 100 KB cap limits input size; it does not by itself show the free-tier CPU budget is met.
 
 **Verification:**
 - [ ] `pnpm --filter @recallfeed/connectors test` passes markdown connector tests
@@ -817,7 +852,7 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 
 **Specification references:**
 - `.kiro/specs/05-authentication.md` — Visibility middleware
-- `.kiro/steering/technology-decisions.md` — Hono, Wrangler 4.148.0
+- `.kiro/steering/technology-decisions.md` — Hono, Wrangler deployment (that file names no Wrangler version; see the pin below)
 - Review 2026-11-14: Move Worker entry before POST /import/markdown verification
 
 **Dependencies:** Task 16
@@ -830,6 +865,7 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] `wrangler.toml` configured: `name = "recallfeed-api"`, `main = "src/index.ts"`, `compatibility_date`, `node_compat = false`
 - [ ] `wrangler.toml` bindings: `[vars]` for `FEED_VISIBILITY` (not secrets yet)
 - [ ] Middleware exports: `getVisibilityMode(env)` → "private" | "public"
+- [ ] **Wrangler pin (aligned 2026-11-14):** `wrangler` is a direct devDependency pinned to exactly `4.162.0`, the version `@cloudflare/vitest-plugin@1.8.2` already pins and this repository already tests, so one copy is installed. This replaces the earlier `4.148.0` plan. It satisfies OpenNext 1.20.x's `^4.148.0` peer range on paper only; it does **not** show that OpenNext, Next.js, or Cloudflare deployment works. That is verified in Gate 3, not here.
 
 **Verification:**
 - [ ] `pnpm --filter @recallfeed/api build` succeeds (or `wrangler deploy --dry-run`)
@@ -918,7 +954,7 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] Route: `POST /import/markdown`
 - [ ] Protected: Uses `requireOwner` or `requireApiKey` based on visibility mode
 - [ ] Accepts `Content-Type: text/markdown` (raw body) OR `Content-Type: application/json` with `{content, name?}`
-- [ ] **Request validation per Spec 05:** Min 10 bytes, max 100 KB
+- [ ] **Request validation per Spec 05:** Min 10 bytes, max 100 KB. The cap is an input limit, not evidence of CPU compliance; record the Task 15 benchmark results for the full import path (parse, hash, database round trips, card creation) before claiming the free-tier budget is met
 - [ ] **Delegates to FeedEngine:** Instantiate `FeedEngine`, call `feedEngine.importMarkdown(content, {name})`
 - [ ] **Response per Spec 05:** `{sourceId, queued, notesImported, feedItemsCreated}` (NOT `notesCreated, notesUpdated`)
 - [ ] Error responses: 400 (size), 401/403 (auth), 500 (import failure)
@@ -927,7 +963,7 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] Integration test with `TEST_DATABASE_URL`: POST markdown → verify notes and feed_items in PostgreSQL
 - [ ] Size validation tests: 9 bytes → 400, 101KB → 400, 50 bytes → 200
 - [ ] Negative auth test: No API key → 401
-- [ ] Manual: `wrangler dev`, authenticated curl with ≥10 bytes:
+- [ ] Manual: `wrangler dev`, authenticated curl with ≥10 bytes. **This `X-API-Key` example applies only to an explicitly public local configuration** (`FEED_VISIBILITY=public` and `API_SECRET_KEY` in the git-ignored `.dev.vars`). Under the private default, `requireOwner` needs the trusted Access identity and `X-API-Key` is not what authorizes the request:
   ```bash
   curl -X POST http://localhost:8787/import/markdown \
     -H "Content-Type: text/markdown" \
@@ -1043,11 +1079,13 @@ Content here"
 - [ ] Negative authorization tests pass (401, 403 where expected)
 - [ ] PostgreSQL integration tests pass (not SQLite mocks)
 - [ ] Early working path verified: `wrangler dev`, POST markdown, GET feed
-- [ ] All Spec 05 contracts followed (exact response fields, validation)
+- [ ] The Spec 05 contracts that Tasks 19-21 cover are followed (import response fields and validation, public DTO omissions, auth responses). The full `GET /feed` contract (cursor, `nextCursor`, strategy ordering) is **not** claimed here; it is checked at the Phase 4 checkpoint
 
 ---
 
 ## Phase 3: Review & Publish Mutations (Tasks 22-24)
+
+> **Execution order: Task 24 → Task 22 → Task 23** (Task 22 needs the review-event queries from Task 24). The task numbers keep their file order. Review the **whole phase** after Task 23; do not stop for review after Task 24, before the endpoint and its integration tests exist.
 
 ### Task 22: Implement PUT /feed/:id/review (all actions per Spec 05)
 
@@ -1161,7 +1199,7 @@ Content here"
 
 ---
 
-**PHASE 3 CHECKPOINT:** All Spec 05 review/publish actions work. Stop for human review before proceeding to Phase 4.
+**PHASE 3 CHECKPOINT:** reached only after Tasks 24, 22, and 23 are all done, in that order. All Spec 05 review/publish actions work. Stop for human review before proceeding to Phase 4.
 
 **Checkpoint criteria:**
 - [ ] PUT /feed/:id/review handles all 6 actions (reviewed, saved, unsaved, snoozed, published, unpublished)
@@ -1244,7 +1282,9 @@ Content here"
 
 ### Task 27: Implement strategy-dependent pagination cursors (sortKey + id per Spec 04)
 
-**Description:** Implement cursor encoding/decoding with **strategy-dependent sortKey** per Spec 04. Recency uses timestamp, importance uses score.
+**Description:** Implement cursor encoding/decoding with **strategy-dependent sortKey** per Spec 04. Recency uses the effective reviewed timestamp. Importance uses `reviewCount`, the actual ranking key from Spec 04 and Task 26; **there is no computed importance score** (Spec 04's `extractSortKey` returns `item.reviewCount`, and Task 26 removed the weighted score).
+
+**Cursor must encode the whole ordering.** The cursor has to carry every field the strategy sorts by, ending with `id`, or items that tie on the leading key are skipped or repeated at page boundaries. Recency orders by `effectiveReviewedAt`, then `id`. Importance orders by `reviewCount`, then `effectiveReviewedAt`, then `id` (Task 26). Spec 04 describes a single scalar `sortKey` plus `id`, which is not enough for the two-key importance order. **Open decision before this task starts:** settle the cursor shape (for example a `sortKey` that holds every ordering key) and record it as a Spec 04 clarification. Do not drop an ordering key to fit a single scalar.
 
 **Specification references:**
 - `.kiro/specs/04-feed-engine.md` — Pagination cursors with strategy-specific sortKey
@@ -1258,12 +1298,14 @@ Content here"
 - [ ] `decodeCursor(cursor)` returns `{id, sortKey}`
 - [ ] `extractSortKey(feedItem, strategy)` function:
   - Recency: Returns `lastReviewedAt ?? createdAt` timestamp
-  - Importance: Returns computed importance score
+  - Importance: Returns `reviewCount` together with the later ordering keys (`effectiveReviewedAt`), per the cursor shape settled above; no computed score
 - [ ] GET /feed uses strategy-specific sortKey for cursor generation
+- [ ] The cursor encodes every ordering key of the active strategy plus `id`
 
 **Verification:**
 - [ ] Unit tests: Encode/decode cursor round-trip
-- [ ] Integration test: GET /feed with recency → cursor contains timestamp, GET /feed with importance → cursor contains score
+- [ ] Pagination test with **ties**: several items with equal `reviewCount` (and equal `effectiveReviewedAt`) split across pages; walking every page returns each item exactly once, none skipped or repeated
+- [ ] Integration test: GET /feed with recency → cursor contains timestamp, GET /feed with importance → cursor contains `reviewCount` and the tie-break keys
 
 **Status:**
 - [ ] Implemented (commit: _______)
@@ -1315,7 +1357,7 @@ Content here"
 **Checkpoint criteria:**
 - [ ] Recency strategy sorts oldest first (ascending)
 - [ ] Importance strategy scores and ranks correctly
-- [ ] Strategy-dependent pagination cursors work (timestamp for recency, score for importance)
+- [ ] Strategy-dependent pagination cursors work (timestamp for recency, `reviewCount` plus tie-break keys for importance; no computed score)
 - [ ] Highlight card generator creates cards
 - [ ] All feed-engine tests pass
 
@@ -1426,7 +1468,7 @@ Before advancing to Gate 3, verify all criteria from `tasks/plan.md`:
 - [ ] All functions have JSDoc comments
 - [ ] Git repository initialized with clean history, no secrets staged
 - [ ] **Each task tracks:** Implemented (commit SHA) / Verified (command output) / Reviewed (evidence)
-- [ ] **Phase checkpoints completed:** Human review at boundaries (tasks 7, 21, 24, 28, 30)
+- [ ] **Phase checkpoints completed:** Human review at boundaries (tasks 7, 21, 23, 28, 30)
 
 ---
 
@@ -1474,7 +1516,7 @@ This todo.md addresses all findings from planning review cycle 2:
 2. ✅ **Early path reorganized:** feed-engine (Task 16), Worker entry (Task 17), auth guards (Task 18) BEFORE POST /import/markdown (Task 19)
 3. ✅ **API contracts restored:** Spec 05 exact response fields, all review actions on /review endpoint (no separate /publish), source-scoped deduplication clarified
 4. ✅ **PostgreSQL transport declared:** Task 10 specifies local PostgreSQL or Neon HTTP test DB
-5. ✅ **Checkpoint review clarified:** Human approval at phase boundaries (tasks 7, 21, 24, 28, 30), within-phase "Reviewed" is independent verification (test suite)
+5. ✅ **Checkpoint review clarified:** Human approval at phase boundaries (tasks 7, 21, 23, 28, 30), no per-task manual approval within a phase, and "Reviewed" requires independent review evidence naming the revision reviewed (see Task State Protocol). [Wording corrected 2026-11-14: this line originally said an automated test suite counted as review, and listed Task 24 as the Phase 3 boundary.]
 6. ✅ **Skill setup complete:** Native Kiro structure verified, discovery evidence provided (Task 6)
 
 **All tasks reconciled against approved Specs 01-09, no invented requirements.**

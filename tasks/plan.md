@@ -120,10 +120,12 @@ Establish Git, linting, TypeScript, tests, and core types. Verify toolchain befo
 
 **Slice 1:** Minimal Markdown import with real authorization → PostgreSQL → deterministic card → feed response
 
+**Scope:** the Phase 2 checkpoint verifies an *intermediate* API. `GET /feed` is a basic list without cursors; the full Spec 05 pagination and ordering contract is delivered and checked in Phase 4, and is not claimed at the Phase 2 checkpoint.
+
 **Tasks:**
 - Task 8: Create `@recallfeed/database` with Neon client (request-scoped factory, HTTP connection)
 - Task 9: Write forward-only migration 001 (sources, notes, feed_items, review_events per Spec 02)
-- Task 10: Set up PostgreSQL test transport (local PostgreSQL or documented Neon HTTP test config)
+- Task 10: Set up PostgreSQL test transport (selected and implemented: local PostgreSQL 17 behind a local Neon-compatible HTTP proxy; no cloud resource)
 - Task 11: Implement source queries (upsert, getById)
 - Task 12: Implement note queries (upsert by source-scoped contentHash, getBySource)
 - Task 13: Implement feed_item queries (insert, getCandidates with isPublished filter)
@@ -147,7 +149,7 @@ Establish Git, linting, TypeScript, tests, and core types. Verify toolchain befo
 - Task 23: Write integration tests for all review actions with state transitions and invalid-action tests
 - Task 24: Implement review_events queries (provides insertReviewEvent for Task 22)
 
-**Note:** Task 24 dependency corrected - it must come before Task 22 uses its queries
+**Execution order: Task 24 → Task 22 → Task 23.** Task 22 needs the review-event queries from Task 24. Review the whole phase after Task 23, not after Task 24.
 
 **Checkpoint:** All Spec 05 review/publish actions work, invalid actions rejected
 
@@ -158,7 +160,7 @@ Establish Git, linting, TypeScript, tests, and core types. Verify toolchain befo
 **Tasks:**
 - Task 25: Implement recency resurfacing strategy (oldest effective reviewed time first per Spec 04)
 - Task 26: Implement importance resurfacing strategy (lower reviewCount first, filter snoozed per Spec 04)
-- Task 27: Implement strategy-dependent pagination cursors (sortKey + id per Spec 04)
+- Task 27: Implement strategy-dependent pagination cursors (recency: effective reviewed time; importance: `reviewCount`; the cursor must encode every ordering key plus `id`, with the multi-key shape settled first)
 - Task 28: Implement highlight card generator
 
 **Checkpoint:** Multiple strategies work, pagination handles strategy-specific sort keys
@@ -317,6 +319,7 @@ After completing each task:
 
 **Dependencies verified:**
 - OpenNext ^1.20.0 + Wrangler ^4.148.0 + Next.js ^15.5.29 (compatible per Gate 1 cycle 10)
+- Direct `wrangler` pin for Task 17: exactly 4.162.0, the version already pinned by the test plugin and tested in this repository. It satisfies the `^4.148.0` peer range on paper; it is not an OpenNext or deployment test (that is Gate 3).
 - All other dependencies follow approved specs
 
 ---

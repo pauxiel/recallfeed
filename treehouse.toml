@@ -1,0 +1,4 @@
+# Optional Treehouse configuration. Treehouse is not required to build or test RecallFeed;
+# see CONTRIBUTING.md. Only the base branch is set. Nothing is copied into a workspace
+# automatically, and no lifecycle hooks are configured here.
+base_branch = "main"

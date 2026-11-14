@@ -47,7 +47,7 @@ Credentials found on this machine today: none (no `DATABASE_URL`, Neon, or Cloud
 | `vitest`, plugin, TypeScript, ESLint | unchanged (4.1.12, 1.8.2, 5.9.3, 10.15.0) | Phase 1 lockfile |
 | PostgreSQL image | `postgres:17`, digest-pinned | version used in Neon's guide |
 
-The todo and agent config still say Wrangler `4.148.0`; the proposal is to supersede that with 4.162.0. OpenNext, Next.js, and deployment compatibility are not tested here and belong to Phase 3.
+**Decided 2026-11-14:** the planned direct Wrangler pin is 4.162.0, recorded in `tasks/todo.md` (Task 17), `tasks/plan.md`, and the agent config. OpenNext, Next.js, and deployment compatibility are not tested by this pin and belong to Gate 3.
 
 ## 4. Review items still to apply to the plan text on approval
 

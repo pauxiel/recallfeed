@@ -122,8 +122,10 @@ export interface IFeedEngine {
    * Imports Markdown content directly.
    *
    * The content is passed as a parameter, not read from the database. The
-   * import is synchronous and stays within the CPU budget through the 100 KB
-   * size limit. Creates or updates a Source record with type "markdown".
+   * import is synchronous. A 100 KB input limit bounds the work, but the limit
+   * does not by itself show that the Workers CPU budget is met; that needs
+   * measured CPU time for the full import path. Creates or updates a Source
+   * record with type "markdown".
    */
   importMarkdown(
     content: string,
