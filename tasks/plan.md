@@ -290,7 +290,7 @@ After completing each task:
 **Never:**
 - Mark work complete solely because code exists
 - Skip tests to move faster
-- Implement multiple tasks in one commit
+- Commit before verification passes, or mix unrelated changes in one commit (coherent verified commits may span closely related tasks; there is no one-task-per-commit quota)
 - Deploy without user approval
 
 ---

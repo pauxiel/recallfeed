@@ -1,6 +1,6 @@
 # RecallFeed Implementation Tasks — Gate 2 (Corrected)
 
-**Status:** Planning corrections cycle 2 complete, awaiting user approval  
+**Status:** Phase 1 (Tasks 1-7) implemented and self-verified 2026-11-14; stopped at the Phase 1 checkpoint awaiting independent Firstmate review. Phases 2-5 are not authorized. See "Phase 1 Execution Record" below the Phase 1 checkpoint.  
 **Based on:** `tasks/plan.md` (corrected per 2026-11-14 planning review)  
 **Tracking:** Markdown checklist with explicit Implemented/Verified/Reviewed state
 
@@ -22,13 +22,15 @@ Each task tracks three stages:
 - [ ] Reviewed (evidence: <test output or reviewer confirmation>)
 ```
 
-**Checkpoint boundaries:** Human approval required at phase boundaries (after tasks 7, 21, 24, 28, 31). Within a phase, "Reviewed" means independent verification (test suite run, not manual approval for every task).
+**Checkpoint boundaries:** Human approval required at phase boundaries (after tasks 7, 21, 24, 28, 30). Within a phase, "Reviewed" means independent verification (test suite run, not manual approval for every task).
 
 **Do not advance to next phase until human reviews phase checkpoint.**
 
 ---
 
 ## Phase 1: Bootstrap & Foundation (Tasks 1-7)
+
+> **Execution note (2026-11-14):** The per-task "Acceptance criteria" and "Verification" checkboxes below are the original plan text and were not ticked one by one. The authoritative record is each task's Status block plus the "Phase 1 Execution Record" after the Phase 1 checkpoint, which also lists where execution deviated from the original wording and why.
 
 ### Task 1: Initialize Git, stage existing specs, verify no secrets
 
@@ -55,9 +57,11 @@ Each task tracks three stages:
 - [ ] **Secrets inspection:** Manually verify no actual secret values (connection strings, API keys, tokens) staged; variable names and placeholders in specs are legitimate
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `git status && git log --oneline --stat`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `9d09c0b`, `chore: initialize repository with approved Gate 1 artifacts`, 68 files, branch `main`)
+- [x] Verified (2026-11-14, `git status` → "nothing to commit, working tree clean"; `git ls-files .kiro/ | wc -l` → 56; `git check-ignore -v .kiro/specs/01-core-domain.md` → exit 1, not ignored. Secrets inspection: regex scan of all 67 pre-existing files for AWS/GitHub/OpenAI/Anthropic/Notion/Slack token shapes, PEM private keys, JWTs, credentialed connection URLs, and literal values assigned to `DATABASE_URL`/`*_KEY`/`TOKEN`/`PASSWORD` → 0 matches; read `.kiro/hooks/scripts/notify-firstmate.sh` in full → no credentials, but it contains the local absolute path `/Users/paulobayuwana/Documents/projects/firstmate`. `.gitignore` additions: `build/`, `coverage/`, `.env.*` with `!.env.example`.)
+- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+
+**Execution notes:** `tasks/todo-old.md`, `tasks/todo-backup-cycle3.md`, `.kiro/agents/recallfeed.json.bak`, and `.kiro/specs/06-inngest-workflows.md.bak` were committed as found. They are superseded clutter; removing them needs a separate decision.
 
 **Files created:**
 - `.git/` (directory)
@@ -89,9 +93,11 @@ Each task tracks three stages:
 - [ ] ESLint configuration validates: `npx eslint --print-config packages/core/src/index.ts` (after Task 7)
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `pnpm lint` and config validation)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `cd16dfb`, `chore: add pnpm workspace, Turborepo, and ESLint max-lines toolchain`)
+- [x] Verified (2026-11-14, Node 22.23.3: `pnpm lint` → exit 0. ESLint lints 9 files: `eslint.config.mjs`, root `vitest.config.ts`, `packages/core/vitest.config.ts`, and 6 core `.ts` files including both tests. `eslint --print-config` resolves `max-lines` to `[2, {max:1000, skipBlankLines:false, skipComments:false}]` for `packages/core/src/index.ts`, a `*.test.ts` file, and a config file. Negative control: temporary files of 1000 lines passed; 1001-line `.ts`, `.test.ts`, and `.config.mjs` files each failed with `File has too many lines (1001). Maximum allowed is 1000`; control files deleted.)
+- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+
+**Deviations from the original task text (installed ESLint 10.15.0 supports flat config only):** `eslint.config.mjs` replaces `.eslintrc.json`; its `ignores` list replaces `.eslintignore`. `.kiro/specs/` needs no exclusion because ESLint only lints JS/TS files. Added dev dependencies: `@eslint/js`, `typescript-eslint`, `globals`.
 
 **Files created:**
 - `package.json` (root, initial)
@@ -125,9 +131,11 @@ Each task tracks three stages:
 - [ ] `.turbo/` directory created after first `pnpm build`
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `pnpm install && pnpm build`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `cd16dfb` for the workspace, Turborepo, and lockfile; `d7b323e` adjusted `turbo.json` outputs and the core package joined the workspace)
+- [x] Verified (2026-11-14: `pnpm install` → exit 0; with zero packages `pnpm build` → "Running build in 0 packages", exit 0, `.turbo/` created; after Task 7 `pnpm build` → 1 package, `tsc -p tsconfig.build.json`, exit 0, `packages/core/dist/` contains 8 files. A fresh copy of the tracked files plus the new files, installed with `pnpm install --frozen-lockfile`, printed no "ignored build scripts" warning and passed all 10 tests, so the `onlyBuiltDependencies` allowlist (`esbuild`, `workerd`) works without manual `pnpm rebuild`.)
+- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+
+**Deviations:** The machine default is Node 20.20.2 but the toolchain requires Node >=22 (Vitest 5 and Wrangler 4.162 declare `>=22.12.0`; the Workers plugin depends on Wrangler 4.162 and Miniflare 5, which declare `>=22`). All commands ran with the already-installed nvm Node 22.23.3. Added `.nvmrc` (`22`) and root `engines.node` `>=22.12.0`. `pnpm lint` runs `eslint .` at the root so it also covers root config files; `turbo.json` still defines a `lint` task and core has a `lint` script. `typecheck` runs the root `tsc --noEmit` and then `turbo run typecheck`.
 
 **Files created:**
 - `pnpm-workspace.yaml`
@@ -161,9 +169,11 @@ Each task tracks three stages:
 - [ ] **Typecheck deferred:** `npx tsc --noEmit` will be run at Phase 1 checkpoint after Task 7 creates core package (empty glob check is not meaningful)
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `npx tsc --noEmit`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `d7b323e`, `feat: add TypeScript, Workers-runtime Vitest, and @recallfeed/core package`)
+- [x] Verified (2026-11-14: `pnpm typecheck` → exit 0 (root `tsc --noEmit -p tsconfig.json`, then `turbo run typecheck` running `tsc -p tsconfig.json && tsc -p tsconfig.test.json` in core). It first failed once with `TS2339: Property 'crypto' does not exist on type 'typeof globalThis'` in `smoke.test.ts`; fixed in the test and rerun clean. Negative control: appending `crypto.randomUUID()` to `packages/core/src/errors.ts` made `tsc -p tsconfig.json` fail with `TS2304: Cannot find name 'crypto'` (exit 2), proving `"types": []` keeps runtime globals out of core source; the edit was reverted and the file diffed identical to its backup.)
+- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+
+**Deviations:** TypeScript is `~5.9.3`, not the registry's `latest` 7.0.2, because installed `typescript-eslint@8.72.2` declares `typescript >=4.8.4 <6.1.0`. `tsconfig.base.json` adds `verbatimModuleSyntax`, `isolatedModules`, `noImplicitOverride`, and `noFallthroughCasesInSwitch`. Core uses three tsconfigs (`tsconfig.json` source with no ambient types, `tsconfig.test.json` with Workers types, `tsconfig.build.json` for emit).
 
 **Files created:**
 - `tsconfig.base.json`
@@ -199,9 +209,11 @@ Each task tracks three stages:
 - [ ] **Smoke test execution deferred to Task 7** (package must exist first)
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (config files created, dependencies installed)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `d7b323e`; dependencies installed in `cd16dfb`)
+- [x] Verified (2026-11-14: `pnpm test` → exit 0, `vitest run` v4.1.12 in the Workers runtime, 2 files / 10 tests passed. Smoke test checks `navigator.userAgent === "Cloudflare-Workers"`, global `crypto.randomUUID()` output matches the RFC 4122 v4 pattern and is unique, and `WebSocketPair`/`HTMLRewriter` exist. Negative control: the same smoke test run under plain Node (no Workers plugin) failed 2 of 3 (`expected 'Node.js/22' to be 'Cloudflare-Workers'`, `WebSocketPair` undefined); control config deleted. `pnpm test:coverage` → istanbul, 100% statements/branches/functions/lines on `errors.ts`, above the 80% threshold.)
+- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+
+**Deviations:** `@cloudflare/vitest-pool-workers@0.23.0` is deprecated and renamed `@cloudflare/vitest-plugin`, so the plugin `1.8.2` is installed (it pins Wrangler `4.162.0` and Miniflare `5.20261113.0-beta`, running workerd `1.20261113.1`). The todo's "Wrangler 4.148.0" is not installed at the root; Task 17 should decide the Wrangler pin. Vitest 4 replaced `vitest.workspace.ts` with `test.projects`, so the root `vitest.config.ts` uses `projects: ["packages/*"]` and each package owns a `vitest.config.ts` calling `cloudflareTest()`. The first smoke test asserted that `process.versions.node` is absent; that was wrong because workerd supplies its own `process` global, so it was replaced with the `WebSocketPair`/`HTMLRewriter` check. Vitest is `^4.1.12` (not 5.x) because the plugin's peer range accepts both and `@vitest/coverage-istanbul` is matched at 4.1.12.
 
 **Files created:**
 - `vitest.config.ts`
@@ -233,8 +245,8 @@ Each task tracks three stages:
 - [x] Evidence documented in `.kiro/skills/DISCOVERY-EVIDENCE.md` ✅
 
 **Verification:**
-- [ ] Skills discovered: `disclose_context` returns skill content (1 verified, 2 expected)
-- [ ] Git tracks skill files: Deferred until Task 1 creates repository
+- [x] Skills are discoverable: `disclose_context` returned `planning-and-task-breakdown` content earlier; in the 2026-11-14 execution session all three skills appear in the session's available-skill list (observed, not individually activated)
+- [x] Git tracks skill files: `git ls-files .kiro/skills` lists 5 files (the 3 `SKILL.md` files, `README.md`, `DISCOVERY-EVIDENCE.md`), committed in `9d09c0b`
 
 **Status:**
 - [x] Implemented (local files prepared during planning corrections)
@@ -283,9 +295,11 @@ Each task tracks three stages:
 - [ ] `packages/core/package.json` shows `"dependencies": {}`
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `pnpm test && pnpm --filter @recallfeed/core build && pnpm typecheck`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `d7b323e`)
+- [x] Verified (2026-11-14: `pnpm test` → 10 tests passed in the Workers runtime (3 smoke, 7 error-hierarchy); `pnpm --filter @recallfeed/core build` via `pnpm build` → exit 0; `pnpm typecheck` → exit 0 including core; `pnpm lint` → exit 0; `packages/core/package.json` has `"dependencies": {}` and no peer or dev dependencies; emitted `dist/index.js` contains only relative re-exports; Skeleton Crew grep over `packages/` found no `apps/` import, no sibling `@recallfeed/*` import, and no `ReflectionFeed`/`DevRecall` string.)
+- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+
+**Deviations (the todo's list is narrower than approved Spec 01, which governs):** The package also exports `IAIProvider` (Spec 01 defines four interfaces, the todo listed three), the supporting types (`NormalizedNote`, `ConnectorCredentials`, `ConnectorValidationResult`, `AIOptions`, `GetFeedOptions`, `FeedPage`, `ImportResult`, `ResurfacingStrategyName`, `NoteMetadata`, `SourceType`, `CardType`), and `RecallFeedError` with its five subclasses, because Spec 01 requires them. Files follow Spec 01's layout (`types.ts`, `interfaces.ts`, `errors.ts`, `index.ts`, plus a package `README.md`) instead of the todo's `types/` and `interfaces/` directories. Added `src/__tests__/errors.test.ts` (7 tests) so the only runtime code, the error classes, is exercised and the 80% coverage threshold is meaningful. Added `tsconfig.test.json` and `tsconfig.build.json`.
 
 **Files created:**
 - `packages/core/package.json`
@@ -301,16 +315,57 @@ Each task tracks three stages:
 
 **PHASE 1 CHECKPOINT:** Bootstrap complete with working toolchain verified. Stop for human review before proceeding to Phase 2.
 
-**Checkpoint criteria:**
-- [ ] Git initialized with approved specs committed, no actual secrets staged (manual inspection performed)
-- [ ] ESLint enforces 1000-line max on all handwritten JS/TS (including tests, configs, scripts, future apps)
-- [ ] pnpm + Turborepo configured, `pnpm build` succeeds
-- [ ] TypeScript strict mode enabled with root tsconfig.json, **`pnpm typecheck` passes** (after Task 7 creates core package)
-- [ ] Vitest configured with Workers runtime pool, **`pnpm test` passes with smoke test** (after Task 7 creates test)
-- [ ] Kiro skills properly installed with discovery evidence (1 verified, 2 expected)
-- [ ] Core package has zero runtime dependencies verified
+**Checkpoint criteria** (self-verified 2026-11-14 on Node 22.23.3; none independently reviewed yet):
+- [x] Git initialized with approved specs committed, no actual secrets staged (manual inspection performed)
+- [x] ESLint enforces 1000-line max on all handwritten JS/TS (including tests, configs, scripts, future apps)
+- [x] pnpm + Turborepo configured, `pnpm build` succeeds
+- [x] TypeScript strict mode enabled with root tsconfig.json, **`pnpm typecheck` passes** (after Task 7 creates core package)
+- [x] Vitest configured with Workers runtime pool, **`pnpm test` passes with smoke test** (after Task 7 creates test)
+- [x] Kiro skills properly installed with discovery evidence (1 verified via tool, 2 observed in the session skill list)
+- [x] Core package has zero runtime dependencies verified
 
 **Note:** Bootstrap checks apply progressively through Phase 1. Complete toolchain verification (`pnpm test && pnpm build && pnpm typecheck`) occurs at this checkpoint after Task 7. Task 1 commits do not require test/build (tools don't exist yet).
+
+---
+
+## Phase 1 Execution Record
+
+Executed 2026-11-14 under the user's Phase 1-only authorization and the Firstmate review `2026-11-14T144008Z-planning.md`. Everything below was run in this session; nothing is carried over as expected output.
+
+**Active model:** `claude-sonnet-5.5`, as stated by the session context at the start of execution. The on-disk `.kiro/agents/recallfeed.json` still says `"model": "claude-sonnet-4.5"`; it was not edited, since no authority was given to change it.
+
+**Runtime:** Node 22.23.3 (nvm, already installed) for every command; the machine default is Node 20.20.2, which the toolchain does not support (see Task 3). pnpm 10.18.3.
+
+**Commits (local only, branch `main`, nothing pushed, no remote configured):**
+
+| Commit | Tasks | Message |
+|---|---|---|
+| `9d09c0b` | 1 | `chore: initialize repository with approved Gate 1 artifacts` |
+| `cd16dfb` | 2, 3 | `chore: add pnpm workspace, Turborepo, and ESLint max-lines toolchain` |
+| `d7b323e` | 4, 5, 7 | `feat: add TypeScript, Workers-runtime Vitest, and @recallfeed/core package` |
+
+The commit that records this evidence is the next one on `main`; its SHA is in the review request.
+
+**Installed versions (from the lockfile resolution):** `typescript 5.9.3`, `eslint 10.15.0`, `@eslint/js 10.0.1`, `typescript-eslint 8.72.2`, `globals 17.14.0`, `turbo 2.11.11`, `vitest 4.1.12`, `@vitest/coverage-istanbul 4.1.12`, `@cloudflare/vitest-plugin 1.8.2`, `@cloudflare/workers-types 5.20261114.1`; transitive runtime `workerd 1.20261113.1`, `miniflare 5.20261113.0-beta`, `wrangler 4.162.0`. Note the Miniflare dependency is a beta build pulled in by the plugin.
+
+**Final command results (Node 22.23.3, working tree at `d7b323e`):**
+
+| Command | Result |
+|---|---|
+| `pnpm lint` | exit 0; 9 files linted, 0 errors, 0 warnings |
+| `pnpm build` | exit 0; `tsc -p tsconfig.build.json`; 8 files in `packages/core/dist/` |
+| `pnpm typecheck` | exit 0 |
+| `pnpm test` | exit 0; Workers runtime; 2 files, 10 tests passed (3 smoke, 7 errors) |
+| `pnpm test:coverage` | exit 0; istanbul; `errors.ts` 100% statements/branches/functions/lines |
+| `pnpm install --frozen-lockfile` in a fresh copy | exit 0; no ignored-build-scripts warning; 10 tests passed |
+
+**Corrections to earlier evidence:** The cycle 3 completion report (`PLANNING-CYCLE3-COMPLETE.md`) gave `grep -c "^## Task" tasks/todo.md` with expected output 30. Run for real it prints 2, because task headings are level three. The correct command, `grep -c '^### Task' tasks/todo.md`, prints 30 (run 2026-11-14). That report is also dated 2026-11-07 although it cites 2026-11-14 reviews. It was not edited; this record supersedes it.
+
+**Record reconciliations made in this pass (review item 5, narrow):** `tasks/plan.md` no longer says "Implement multiple tasks in one commit"; the two checkpoint lists in this file now read "7, 21, 24, 28, 30". The remaining references to Task 31 in this file are historical notes about its consolidation into Task 18.
+
+**Deliberately not changed (later-phase corrections from the review, to settle before those phases are authorized):** Task 10 database transport; Task 27 cursor and its reference to a removed importance score; the basic-feed versus full Spec 05 contract distinction; the Phase 3 execution order and the "checkpoint after task 24" phrasing. Task 17 also needs a Wrangler version decision, since `4.148.0` is not what the installed plugin pins.
+
+**Review state:** Implemented and Verified for Tasks 1-5 and 7; Task 6 re-verified with Git tracking. No task is marked Reviewed: running my own tests is verification, not independent review.
 
 ---
 
@@ -1317,7 +1372,7 @@ This todo.md addresses all findings from planning review cycle 2:
 2. ✅ **Early path reorganized:** feed-engine (Task 16), Worker entry (Task 17), auth guards (Task 18) BEFORE POST /import/markdown (Task 19)
 3. ✅ **API contracts restored:** Spec 05 exact response fields, all review actions on /review endpoint (no separate /publish), source-scoped deduplication clarified
 4. ✅ **PostgreSQL transport declared:** Task 10 specifies local PostgreSQL or Neon HTTP test DB
-5. ✅ **Checkpoint review clarified:** Human approval at phase boundaries (tasks 7, 21, 24, 28, 31), within-phase "Reviewed" is independent verification (test suite)
+5. ✅ **Checkpoint review clarified:** Human approval at phase boundaries (tasks 7, 21, 24, 28, 30), within-phase "Reviewed" is independent verification (test suite)
 6. ✅ **Skill setup complete:** Native Kiro structure verified, discovery evidence provided (Task 6)
 
 **All tasks reconciled against approved Specs 01-09, no invented requirements.**
