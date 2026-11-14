@@ -1,16 +1,14 @@
-import { Client, neonConfig } from "@neondatabase/serverless";
-import ws from "ws";
 import type { TestProject } from "vitest/node";
-import { configureLocalNeonProxy } from "../local-proxy";
 import { migrateDatabase } from "../migrate-node";
-import { assertSafeTestDatabaseUrl } from "../test-safety";
+import { resetDisposableFixture } from "../test-fixture-node";
 
 /**
- * Vitest global setup. Runs once in Node before the Workers-runtime tests.
+ * Vitest global setup. Runs once in Node before the tests.
  *
  * With no `TEST_DATABASE_URL` it does nothing and the integration suites skip. With one,
- * it checks the target is a local test database, resets the `public` schema, and runs
- * the real migration code twice so the tests can verify both runs.
+ * it resets the `public` schema behind three gates (URL, the driver's real target, and
+ * the fixture identity and marker on the live session; see `test-fixture-node.ts`), then
+ * runs the real migration code twice so the tests can verify both runs.
  */
 export default async function setup(project: TestProject): Promise<void> {
   const databaseUrl = process.env.TEST_DATABASE_URL ?? "";
@@ -19,19 +17,7 @@ export default async function setup(project: TestProject): Promise<void> {
     return;
   }
 
-  assertSafeTestDatabaseUrl(databaseUrl);
-  configureLocalNeonProxy(databaseUrl);
-  neonConfig.webSocketConstructor = ws;
-
-  const client = new Client(databaseUrl);
-  await client.connect();
-  try {
-    await client.query("DROP SCHEMA IF EXISTS public CASCADE");
-    await client.query("CREATE SCHEMA public");
-  } finally {
-    await client.end();
-  }
-
+  await resetDisposableFixture(databaseUrl);
   const first = await migrateDatabase(databaseUrl);
   const second = await migrateDatabase(databaseUrl);
   project.provide("migrationRuns", { first, second });

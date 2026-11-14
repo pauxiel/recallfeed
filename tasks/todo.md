@@ -451,7 +451,7 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 - [x] Verified against a real PostgreSQL 17.12, not a syntax check: the `pnpm db:migrate` CLI was run on a reset database. First run → `applied 001_initial.sql`, `done: 1 applied, 0 skipped`; second run → `skipped 001_initial.sql`, `done: 0 applied, 1 skipped`. Ground truth read with `psql` inside the container: `_schema_migrations` holds exactly `001_initial.sql`; tables are `_schema_migrations, feed_items, notes, review_events, sources`; 11 `*_idx` indexes exist; `notes_source_content_hash_idx` is `CREATE UNIQUE INDEX … (source_id, content_hash)`. A deliberately failing second migration (`CREATE TABLE should_not_exist …; SELECT * FROM table_that_does_not_exist`) was rejected, left no `should_not_exist` table and no tracking row. The CLI without `DATABASE_URL` exits 1 and changes nothing. The 12 unit tests in `migrate.test.ts` cover numeric ordering (`010` after `002`), malformed names, duplicate prefixes, skipping, and rollback.
 - [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
 
-**Deviations and notes:** Spec 02 is internally inconsistent about ordering ("lexicographic" in the acceptance list, "numeric by prefix" in the algorithm); the runner sorts numerically, as the algorithm and the example in the spec require. `001_initial.sql` also contains `CREATE TABLE IF NOT EXISTS _schema_migrations` because the spec says both that the runner creates it and that `001` creates all five tables; the statement is idempotent. The runner uses a WebSocket `Client` in Node, because the HTTP `neon()` function cannot run multi-statement files or transactions. Files are `src/migrate.ts` (logic), `src/migrate-node.ts` and `src/migrate-cli.ts` (Node entry).
+**Deviations and notes:** Spec 02 is internally inconsistent about ordering ("lexicographic" in the acceptance list, "numeric by prefix" in the algorithm); the runner sorts numerically, as the algorithm and the example in the spec require. `001_initial.sql` also contains `CREATE TABLE IF NOT EXISTS _schema_migrations` because the spec says both that the runner creates it and that `001` creates all five tables; the statement is idempotent. The runner uses a WebSocket `Client` session in Node. The HTTP `neon()` function does support non-interactive transactions (`sql.transaction([...])`), but it rejects a multi-statement string ("cannot insert multiple commands into a prepared statement") and cannot hold an interactive `BEGIN … COMMIT` across stateless calls (checked against PostgreSQL 17.12 on 2026-11-14); a migration file needs both. This wording was corrected after Firstmate's review. Files are `src/migrate.ts` (logic), `src/migrate-node.ts` and `src/migrate-cli.ts` (Node entry).
 
 **Files created:**
 - `packages/database/src/migrations/001_initial.sql`
@@ -536,9 +536,55 @@ Run 2026-11-14 under the user's authorization to install Colima/Docker/Compose a
 4. A test expected `WHERE is_published`; PostgreSQL stores the predicate as `WHERE (is_published = true)`. Fixed the assertion, not the schema.
 5. My `tsx`/`@types/node` install first went into the database package and produced extra peer-dependency resolutions; they now live at the workspace root, followed by a clean reinstall.
 
-**Not verified / limits:** the proxy is a community image, so parity with hosted Neon is high but unproven; no real Neon branch was used. WebSocket transactions were verified only from Node (`ws`), not from workerd. `*-node.ts`, `*-cli.ts`, and `__tests__/setup.ts` run in Node and cannot be instrumented by the Workers-process coverage run, so they are excluded from coverage and verified by running them. First use of `db.localtest.me` needs internet DNS. Hosted-Neon compatibility of the migration SQL was not tested.
+**Not verified / limits:** the proxy is a community image, so parity with hosted Neon is high but unproven; no real Neon branch was used. WebSocket transactions were verified only from Node (`ws`), not from workerd. First use of `db.localtest.me` needs internet DNS. (The earlier coverage exclusion of `*-node.ts` was replaced in the correction pass below; only `*-cli.ts` entry points are excluded now.)
 
 **Stop point:** Tasks 8-10 are implemented and self-verified. Tasks 11-21 are not started. Awaiting independent Firstmate review.
+
+---
+
+### Phase 2 database spike: correction pass after Firstmate review (R1, R2, and related corrections)
+
+Run 2026-11-14 under the user's correction-only authorization, from `firstmate/data/recallfeed/reviews/2026-11-14T163124Z-database.md` (verdict REQUEST CHANGES). Architecture unchanged. Tasks 11-21 not started. Nothing pushed. No cloud resources.
+
+**R1 reproduced first (local, no network):** the guard accepted `postgres://…@db.localtest.me:5432/recallfeed_test?host=ep-example.neon.tech`, and the real driver's effective host was `ep-example.neon.tech`.
+**R2 reproduced first:** `neonConfig.useSecureWebSocket` went `true` → `false` after a local call and stayed `false` after a nonlocal call.
+
+**R1 fix: three gates before any destructive SQL** (`test-safety.ts`, `test-fixture.ts`, `test-fixture-node.ts`, `docker/init-test-fixture.sql`):
+1. URL as written: allowed host, database name exactly `recallfeed_test` (the old "contains the word test" rule was dropped; it accepted `customer_test_backup`), and **no query string or fragment at all**, judged on the raw string.
+2. The driver's effective target: an unconnected `Client` is built and its `host`, `port`, and `database` must equal the URL's.
+3. The live session: `current_database()` must be `recallfeed_test` **and** the database must carry the comment `recallfeed-disposable-test-fixture:v1`, which the container's init script writes when the fixture is created. A database comment sits outside `public`, so the schema reset keeps it (verified: the marker survived a reset and a CLI migration). The destructive `DROP SCHEMA` / `CREATE SCHEMA` run on that same session, after the check.
+
+**R2 fix:** the unencrypted WebSocket settings (`useSecureWebSocket = false`, `wsProxy`) are now set on one `Client`'s own `neonConfig`, only when that client's effective host is exactly `db.localtest.me`, and the installed `wsProxy` throws for any other host instead of falling back. Nothing is written to the process-wide config. Verified in the real driver: `client.neonConfig` is a separate object, and setting it on one client leaves another client and the global untouched. HTTP routing (`fetchEndpoint`) is the one setting the driver only allows globally, so `configureLocalNeonHttp` installs a function that answers only for `db.localtest.me` and delegates every other host to the driver's default endpoint (`https://api.neon.tech/sql` for a Neon host); repeated calls do not stack wrappers.
+
+**Related corrections:**
+- `readMigrationFiles(directory)` used `new URL(filename, "file://" + directory)`, which resolves one directory too high when the path has no trailing slash. Now `path.join`. Regression test passes with and without the slash, with a temp directory, and for a missing directory.
+- The statement that HTTP `neon()` "cannot run transactions" was wrong; corrected in `README.md`, `migrate.ts`, `migrate-node.ts`, and Task 9 above, using a live check: `sql.transaction([a, b])` works; a multi-statement string is rejected; an interactive `BEGIN` does not persist across calls.
+- New plain-Node Vitest project (`vitest.node.config.ts`, files `*.node.test.ts`) for the filesystem reader, the connection lifecycle, and the guarded fixture client. `pnpm test` runs both projects. Coverage now measures the Node files too; only `*-cli.ts` entry points are excluded.
+- `docker/compose.test.yaml` mounts `init-test-fixture.sql`; the stack was recreated so the container carries the marker (the earlier container did not, and the new setup would correctly have refused it).
+- `tasks/phase2-proposal.md` now records the decided database option.
+
+**Regression tests (all named `regression R1` / `regression R2`):** gate 1 rejects `?host=`, `?hostname=`, `?database=`, `?port=`, `?sslmode`, a fragment, a bare `?`, and seven non-fixture local database names including `customer_test_backup`; the review's exact URL passes the old host check but the real driver resolves a different host and gate 2 refuses it; scripted sessions with a wrong database name, a missing marker, or a wrong marker receive **zero** destructive statements and the identity check always precedes them; against the live fixture, removing the marker makes `resetDisposableFixture` refuse, and the existing data is unchanged afterward, with the marker restored in a `finally`; a local client's TLS relaxation does not reach a later nonlocal client, the global stays `true`, the local client refuses an unencrypted socket to any other host, and a `?host=` override gets no relaxation; a local client whose socket constructor throws rejects and leaves no global state; a `migrateDatabase` run against the local proxy leaves the global `true`.
+
+**Verification (Node 22.23.3, from clean `dist/`, `coverage/`, `.turbo/`):**
+
+| Command | Result |
+|---|---|
+| `pnpm lint`, `pnpm build`, `pnpm typecheck` | all exit 0 |
+| `pnpm test`, no database | exit 0; core 10 passed; database workerd 61 passed + 16 skipped; database Node 13 passed + 4 skipped |
+| `pnpm --filter @recallfeed/database test:integration` | exit 0; workerd 77 passed; Node 17 passed; 0 skipped |
+| `pnpm test:coverage` with the database | exit 0; 10 files, 104 tests; 100% statements, functions, lines; 97.91% branches |
+| `pnpm db:migrate` twice on a reset schema | `applied 001_initial.sql`, then `skipped 001_initial.sql`; marker survived the reset |
+| Review reproductions on corrected code | R1: review URL refused before any client was built (`VALIDATION_TEST_DATABASE_PARAMS`); R2: global stayed `true` after both local and nonlocal configuration |
+
+**Mutation checks (each reverted, files diffed identical afterward):** removing the query-string rejection from gate 1 failed 8 tests (7 workerd, 1 Node); setting the TLS relaxation process-wide again and dropping the host restriction failed 3 tests.
+
+**Fuzz of gate 1 against the real driver parser** (18 URLs including userinfo tricks, trailing dots, case, percent-encoding, `127.1`, IPv6): no URL passed gate 1 while the driver resolved a different target. Gate 2 therefore guards against future parser drift and is not shown to catch a live case beyond the `?host=` override that gate 1 now refuses first.
+
+**Mistakes of mine during this pass, found by running things:** an interrupted file write (rewritten in full); a `fetchEndpoint` default I assumed was a string (it is a function; checked before coding the delegation); a test expecting a bare `?` to survive URL parsing (it does not; gate 1 now checks the raw string); a workerd test assuming a throwing socket constructor rejects (in workerd the driver took a different path and appears to have reached the live proxy; moved to the Node project where it is deterministic); a Node test assuming `:1` in the URL breaks the connection (the proxy ignores the URL port; removed, because the constructor-failure test already covers a real connection failure); a `timeout` command that does not exist on macOS, so one probe printed nothing and is not claimed.
+
+**Not verified / limits:** the `host`, `port`, and `database` fields I read from the driver's `Client` are the effective values for this driver version (1.2.1); a future driver version could change them, which gate 2's test would reveal. The proxy ignores the URL's port and database, so a live "wrong database" case cannot be produced through it; gate 3 is exercised with scripted sessions and with the marker removed live. No hosted-Neon, deployment, or cloud check. Wrangler `4.148.0` versus `4.162.0` and the later-phase plan wording (Task 27 cursor, Phase 3 order, basic-feed wording, `importMarkdown` JSDoc) are deliberately **not** changed in this pass.
+
+**Stop point:** correction pass complete, awaiting independent Firstmate review. The database commits are not pushed.
 
 ---
 

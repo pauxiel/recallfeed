@@ -1,8 +1,9 @@
 import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Client, neonConfig } from "@neondatabase/serverless";
+import { Client } from "@neondatabase/serverless";
 import ws from "ws";
-import { configureLocalNeonProxy } from "./local-proxy";
+import { configureLocalNeonWebSocket } from "./local-proxy";
 import { applyMigrations } from "./migrate";
 import type { Migration, MigrationReport } from "./migrate";
 
@@ -12,7 +13,8 @@ export const MIGRATIONS_DIR = fileURLToPath(new URL("./migrations/", import.meta
 /**
  * Reads every `.sql` file in a directory.
  *
- * @param directory - Defaults to this package's `migrations/` directory.
+ * @param directory - A directory path, with or without a trailing separator. Defaults to
+ * this package's `migrations/` directory.
  * @returns The files in directory order; sorting happens in `applyMigrations`.
  */
 export async function readMigrationFiles(directory: string = MIGRATIONS_DIR): Promise<Migration[]> {
@@ -20,14 +22,22 @@ export async function readMigrationFiles(directory: string = MIGRATIONS_DIR): Pr
   return Promise.all(
     names.map(async (filename) => ({
       filename,
-      sql: await readFile(new URL(filename, `file://${directory}`), "utf8"),
+      sql: await readFile(join(directory, filename), "utf8"),
     })),
   );
 }
 
 /**
- * Connects over WebSocket (Node has no global WebSocket constructor for the driver),
- * applies pending migrations, and disconnects. Node only: this never runs in a Worker.
+ * Connects over WebSocket, applies pending migrations, and disconnects. Node only: this
+ * never runs in a Worker.
+ *
+ * The migration runner needs a session so it can wrap each multi-statement file and its
+ * tracking row in one transaction. The HTTP `neon()` function supports only
+ * non-interactive batches of single statements, so a WebSocket `Client` is used instead.
+ *
+ * The unencrypted local-proxy settings apply to this one client, and only when its
+ * effective host is the local proxy host. Any other target keeps the driver's secure
+ * defaults.
  *
  * @param databaseUrl - Target connection string. Never logged.
  * @param log - Receives one line per migration.
@@ -37,9 +47,9 @@ export async function migrateDatabase(
   databaseUrl: string,
   log: (line: string) => void = () => undefined,
 ): Promise<MigrationReport> {
-  configureLocalNeonProxy(databaseUrl);
-  neonConfig.webSocketConstructor = ws;
   const client = new Client(databaseUrl);
+  client.neonConfig.webSocketConstructor = ws;
+  configureLocalNeonWebSocket(client);
   await client.connect();
   try {
     return await applyMigrations(client, await readMigrationFiles(), log);

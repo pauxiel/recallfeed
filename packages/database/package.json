@@ -14,8 +14,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json && tsc -p tsconfig.test.json",
-    "test": "vitest run",
-    "test:integration": "TEST_DATABASE_URL=${TEST_DATABASE_URL:-postgres://postgres:postgres@db.localtest.me:5432/recallfeed_test} vitest run",
+    "test": "vitest run --config vitest.config.ts && vitest run --config vitest.node.config.ts",
+    "test:integration": "TEST_DATABASE_URL=${TEST_DATABASE_URL:-postgres://postgres:postgres@db.localtest.me:5432/recallfeed_test} pnpm test",
     "lint": "eslint .",
     "db:migrate": "tsx src/migrate-cli.ts",
     "db:test:up": "docker-compose -f docker/compose.test.yaml up -d --wait",

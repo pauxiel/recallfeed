@@ -9,9 +9,12 @@ export type Migration = {
 };
 
 /**
- * The minimal query surface the runner needs. The Neon `Client` (WebSocket) satisfies it.
- * Migrations need multi-statement files and a transaction, which the HTTP `neon()` function
- * does not provide, so the runner takes a connected session object instead.
+ * The minimal query surface the runner needs. The Neon `Client` (a WebSocket session)
+ * satisfies it.
+ *
+ * Migrations need a session because each file holds several statements and must run in one
+ * transaction with its tracking row. The HTTP `neon()` function supports transactions only
+ * as non-interactive batches of single statements, so it cannot run a multi-statement file.
  */
 export type MigrationClient = {
   query(text: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;

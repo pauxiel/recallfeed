@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { beforeAll, describe, expect, inject, it } from "vitest";
 import { createDb } from "../client";
 import type { DbClient } from "../client";
-import { configureLocalNeonProxy } from "../local-proxy";
+import { configureLocalNeonHttp } from "../local-proxy";
 
 const databaseUrl = env.TEST_DATABASE_URL;
 
@@ -21,7 +21,7 @@ describe.skipIf(databaseUrl === "")("schema, migrations, and named constraints (
   let sql: DbClient;
 
   beforeAll(() => {
-    configureLocalNeonProxy(databaseUrl);
+    configureLocalNeonHttp(databaseUrl);
     sql = createDb(databaseUrl);
   });
 

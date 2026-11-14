@@ -1,5 +1,5 @@
 import { cloudflareTest } from "@cloudflare/vitest-plugin";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 // Integration tests need a disposable database. Start it with `pnpm db:test:up` and run
 // `pnpm test:integration`. Without TEST_DATABASE_URL the integration suites are skipped,
@@ -19,7 +19,9 @@ export default defineConfig({
   ],
   test: {
     name: "database",
-    include: ["**/*.test.ts"],
+    include: ["src/**/*.test.ts"],
+    // Files named *.node.test.ts run in plain Node under vitest.node.config.ts.
+    exclude: [...configDefaults.exclude, "src/**/*.node.test.ts"],
     // Runs in Node before the Workers-runtime tests: guards the target, resets the
     // schema, and applies migrations through the migration code under test.
     globalSetup: ["./src/__tests__/setup.ts"],

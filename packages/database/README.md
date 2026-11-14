@@ -33,9 +33,15 @@ DATABASE_URL=postgres://... pnpm --filter @recallfeed/database db:migrate
 ```
 
 The runner (`src/migrate.ts`) applies each unapplied file in its own transaction together
-with its `_schema_migrations` row, so a failed file leaves nothing behind. The Node entry
-point (`migrate-node.ts`, `migrate-cli.ts`) uses a WebSocket connection because the HTTP
-`neon()` function cannot run multi-statement files or transactions. It never runs in a Worker.
+with its `_schema_migrations` row, so a failed file leaves nothing behind.
+
+The Node entry point (`migrate-node.ts`, `migrate-cli.ts`) opens a WebSocket **session** on
+purpose. The HTTP `neon()` function does support transactions, but only as a non-interactive
+batch of single statements (`sql.transaction([...])`). A migration file holds several
+statements, and the HTTP function rejects those ("cannot insert multiple commands into a
+prepared statement", checked against PostgreSQL 17.12 on 2026-11-14). It also cannot hold an
+interactive `BEGIN ... COMMIT` open across calls, because each HTTP call is stateless. A
+session has neither limit. The runner never runs in a Worker.
 
 ## Test database
 
@@ -52,18 +58,36 @@ pnpm --filter @recallfeed/database db:test:down        # stop and discard the da
   needs an external service. A skipped run is not a pass: check the skipped count.
 - The proxy listens on `127.0.0.1:4444` only. PostgreSQL publishes no port, and its data is
   on tmpfs. Keep development data in a separate compose project, volume, and ports.
-- The setup **drops and recreates the `public` schema**. `assertSafeTestDatabaseUrl` refuses
-  any host except `localhost`, `127.0.0.1`, `::1`, and `db.localtest.me`, and any database
-  name that does not contain `test` as a whole word.
+- The setup **drops and recreates the `public` schema**, so it refuses to start unless all
+  three gates pass:
+  1. `assertSafeTestDatabaseUrl`: the host is `localhost`, `127.0.0.1`, `::1`, or
+     `db.localtest.me`; the database is exactly `recallfeed_test`; and the URL has **no query
+     parameters or fragment** (the Neon driver lets `?host=` override the host).
+  2. `assertDriverTargetMatchesUrl`: the host, port, and database the driver will use equal
+     the URL's, checked on an unconnected client.
+  3. `assertDisposableFixture`: on the live session, `current_database()` is
+     `recallfeed_test` **and** the database carries the comment written by
+     `docker/init-test-fixture.sql` when the container was created. A database that was not
+     created as the fixture has no such comment and is never reset.
+- Unencrypted WebSocket access to the proxy is configured **per client**, only when that
+  client's host is exactly `db.localtest.me`, and it refuses any other host. Nothing is left
+  in the process-wide Neon config. HTTP routing is process-wide because the driver offers no
+  per-client option; it answers only for `db.localtest.me` and delegates every other host to
+  the driver's default endpoint.
 - `db.localtest.me` resolves to `127.0.0.1` through public DNS, so first use needs internet.
   Working offline needs a hosts-file entry, which is a privileged change.
 - The proxy image is a community project, not Neon's. It gives high but not perfect parity
   with hosted Neon. Re-verify against a real Neon branch before relying on edge behavior.
 - The `postgres:postgres` credentials guard a throwaway loopback database and are not secrets.
 
-## Coverage
+## Tests and coverage
 
-The root coverage run measures what executes inside the Workers test process. The Node-only
-files (`*-node.ts`, `*-cli.ts`, and test setup) cannot be instrumented there, so they are
-excluded in `vitest.config.ts` and verified by running them: the CLI against a reset database,
-and the integration suite, which depends on the global setup.
+Two Vitest projects: `vitest.config.ts` runs `*.test.ts` in the Workers runtime (workerd), and
+`vitest.node.config.ts` runs `*.node.test.ts` in plain Node. `pnpm test` runs both. Without
+`TEST_DATABASE_URL` the database-backed suites skip, so an ordinary green `pnpm test` is **not**
+full database validation. Run `test:integration` for that and look at the skipped count.
+
+Coverage is collected in both projects. Only `*-cli.ts` entry points are excluded, because they
+are separate processes that call `process.exit()`. They are verified by running them
+(`pnpm db:migrate`). The global setup is excluded as a test file and is exercised by every
+integration run.

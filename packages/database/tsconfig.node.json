@@ -7,8 +7,11 @@
   "include": [
     "src/migrate-node.ts",
     "src/migrate-cli.ts",
+    "src/test-fixture-node.ts",
     "src/__tests__/setup.ts",
+    "src/__tests__/*.node.test.ts",
     "src/__tests__/provided-context.d.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "vitest.node.config.ts"
   ]
 }

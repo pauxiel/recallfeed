@@ -12,6 +12,8 @@
 #   * Postgres data lives on tmpfs, so it disappears when the container stops.
 #   * Postgres publishes no port. Only the proxy is reachable from the host, and only
 #     on 127.0.0.1 (never 0.0.0.0).
+#   * The test setup only resets a database that carries the fixture marker written by
+#     init-test-fixture.sql, in addition to checking the URL and the driver's real target.
 #   * The credentials below protect a throwaway database that exists only on this
 #     machine's loopback interface. They are not secrets and must not be reused.
 #
@@ -30,6 +32,9 @@ services:
       POSTGRES_DB: recallfeed_test
     tmpfs:
       - /var/lib/postgresql/data
+    volumes:
+      # Writes the disposable-fixture marker the test setup requires before it resets anything.
+      - ./init-test-fixture.sql:/docker-entrypoint-initdb.d/10-fixture-marker.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d recallfeed_test"]
       interval: 2s

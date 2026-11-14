@@ -4,6 +4,8 @@ Prepared 2026-11-14 after the Phase 1 review (`firstmate/data/recallfeed/reviews
 
 ## 1. Isolated test database (settles Task 10's transport)
 
+**Decided 2026-11-14: Option A, implemented and verified in `packages/database` (see `tasks/todo.md`, "Phase 2 database spike evidence" and the correction pass). Option B was not used and no cloud resource exists.**
+
 An ordinary local PostgreSQL URL does not work with `@neondatabase/serverless`'s HTTP client, which speaks Neon's own HTTP protocol. Two paths do.
 
 **Option A (recommended): local PostgreSQL 17 behind a local Neon HTTP proxy.**
@@ -65,6 +67,8 @@ Contest context comes from Firstmate's verified 2026 rules check (`firstmate/dat
 Installed-dependency licenses (220 packages, checked 2026-11-14): 166 MIT, 20 Apache-2.0, 11 ISC, 11 BSD, 4 dual MIT/Apache, 3 BlueOak, plus `lightningcss` (MPL-2.0), `@img/sharp-libvips-darwin-arm64` (LGPL-3.0-or-later), and `caniuse-lite` (CC-BY-4.0). None is copied into this repository.
 
 ## 6. Decisions requested
+
+*Status 2026-11-14: decisions 1 (Option A, with Colima), 4 (MIT, `Copyright (c) 2026 pauxiel`) and 5 in part are made. Decisions 2 (Wrangler 4.162.0) and 3 (plan-text edits) remain open, and Tasks 11-21 are not authorized.*
 
 1. Option A or B for the test database (and, for A, which container runtime to install).
 2. Wrangler 4.162.0 as the direct pin.

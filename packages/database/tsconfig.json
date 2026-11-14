@@ -10,6 +10,7 @@
     "src/**/__tests__/**",
     "src/**/*.test.ts",
     "src/migrate-node.ts",
-    "src/migrate-cli.ts"
+    "src/migrate-cli.ts",
+    "src/test-fixture-node.ts"
   ]
 }

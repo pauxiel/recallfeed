@@ -19,6 +19,8 @@
     "packages/*/src/**/*-node.ts",
     "packages/*/src/**/*-cli.ts",
     "packages/*/src/__tests__/setup.ts",
-    "packages/*/vitest.config.ts"
+    "packages/*/src/**/*.node.test.ts",
+    "packages/*/vitest.config.ts",
+    "packages/*/vitest.node.config.ts"
   ]
 }
