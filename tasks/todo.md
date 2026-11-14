@@ -414,7 +414,9 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 **Status:**
 - [x] Implemented (commit: `f07e34d`)
 - [x] Verified (2026-11-14, Node 22.23.3: `pnpm build` → exit 0 for both packages; `pnpm typecheck` → exit 0 (three configs: Worker code, Node scripts, tests); `pnpm lint` → exit 0. `createDb` is exercised in the Workers runtime by `driver.test.ts` and `schema.test.ts`. `@recallfeed/database` dependencies are `@neondatabase/serverless ^1.2.1` and `@recallfeed/core workspace:*` only; no pooling or ORM library.)
-- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+- [x] Reviewed (Firstmate independent review: `2026-11-14T163124Z-database.md` REQUEST CHANGES, then `2026-11-14T171500Z-database-corrections.md` APPROVE at `29538fb`; it independently reran lint, build, typecheck, and the no-database tests, ran SELECT-only live checks, and mutated the corrected files in an isolated copy. It did not rerun the destructive integration suite; that remains this project's own evidence)
+- [x] Pushed (`origin/main` = `29538fb9def2ac9717c5310ffd8da564a69a0112`, read back from the server 2026-11-14)
+- [ ] Merged (not applicable: committed directly to `main` before the phase-branch workflow; no branch to merge)
 
 **Deviations:** The factory is named `createDb` (with `DbClient`), as approved Spec 02 and Spec 07 name it; this task's text said `createDatabaseClient`. A `DatabaseEnv` type holds the `DATABASE_URL` binding. `tsx`, `@types/node`, `ws`, and `@types/ws` are dev tooling for the Node-only migration CLI; `tsx` and `@types/node` sit at the workspace root and `ws`/`@types/ws` in this package.
 
@@ -453,7 +455,9 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 **Status:**
 - [x] Implemented (commit: `f07e34d`)
 - [x] Verified against a real PostgreSQL 17.12, not a syntax check: the `pnpm db:migrate` CLI was run on a reset database. First run → `applied 001_initial.sql`, `done: 1 applied, 0 skipped`; second run → `skipped 001_initial.sql`, `done: 0 applied, 1 skipped`. Ground truth read with `psql` inside the container: `_schema_migrations` holds exactly `001_initial.sql`; tables are `_schema_migrations, feed_items, notes, review_events, sources`; 11 `*_idx` indexes exist; `notes_source_content_hash_idx` is `CREATE UNIQUE INDEX … (source_id, content_hash)`. A deliberately failing second migration (`CREATE TABLE should_not_exist …; SELECT * FROM table_that_does_not_exist`) was rejected, left no `should_not_exist` table and no tracking row. The CLI without `DATABASE_URL` exits 1 and changes nothing. The 12 unit tests in `migrate.test.ts` cover numeric ordering (`010` after `002`), malformed names, duplicate prefixes, skipping, and rollback.
-- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+- [x] Reviewed (Firstmate independent review: `2026-11-14T163124Z-database.md` REQUEST CHANGES, then `2026-11-14T171500Z-database-corrections.md` APPROVE at `29538fb`; it independently reran lint, build, typecheck, and the no-database tests, ran SELECT-only live checks, and mutated the corrected files in an isolated copy. It did not rerun the destructive integration suite; that remains this project's own evidence)
+- [x] Pushed (`origin/main` = `29538fb9def2ac9717c5310ffd8da564a69a0112`, read back from the server 2026-11-14)
+- [ ] Merged (not applicable: committed directly to `main` before the phase-branch workflow; no branch to merge)
 
 **Deviations and notes:** Spec 02 is internally inconsistent about ordering ("lexicographic" in the acceptance list, "numeric by prefix" in the algorithm); the runner sorts numerically, as the algorithm and the example in the spec require. `001_initial.sql` also contains `CREATE TABLE IF NOT EXISTS _schema_migrations` because the spec says both that the runner creates it and that `001` creates all five tables; the statement is idempotent. The runner uses a WebSocket `Client` session in Node. The HTTP `neon()` function does support non-interactive transactions (`sql.transaction([...])`), but it rejects a multi-statement string ("cannot insert multiple commands into a prepared statement") and cannot hold an interactive `BEGIN … COMMIT` across stateless calls (checked against PostgreSQL 17.12 on 2026-11-14); a migration file needs both. This wording was corrected after Firstmate's review. Files are `src/migrate.ts` (logic), `src/migrate-node.ts` and `src/migrate-cli.ts` (Node entry).
 
@@ -494,7 +498,9 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 **Status:**
 - [x] Implemented (commit: `f07e34d`)
 - [x] Verified (2026-11-14, see "Phase 2 database spike evidence" below)
-- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+- [x] Reviewed (Firstmate independent review: `2026-11-14T163124Z-database.md` REQUEST CHANGES, then `2026-11-14T171500Z-database-corrections.md` APPROVE at `29538fb`; it independently reran lint, build, typecheck, and the no-database tests, ran SELECT-only live checks, and mutated the corrected files in an isolated copy. It did not rerun the destructive integration suite; that remains this project's own evidence)
+- [x] Pushed (`origin/main` = `29538fb9def2ac9717c5310ffd8da564a69a0112`, read back from the server 2026-11-14)
+- [ ] Merged (not applicable: committed directly to `main` before the phase-branch workflow; no branch to merge)
 
 **Transport chosen:** Option A, refined. `@neondatabase/serverless` over HTTP to a local Neon-compatible proxy (`ghcr.io/timowilhelm/local-neon-http-proxy`, pinned by digest) in front of PostgreSQL 17.12, both run by Docker Compose under Colima. No cloud resources. An ordinary `postgresql://localhost:5432` listener is not enough; the proxy is what makes the HTTP client work.
 
@@ -590,6 +596,27 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 **Not verified / limits:** the `host`, `port`, and `database` fields I read from the driver's `Client` are the effective values for this driver version (1.2.1); a future driver version could change them, which gate 2's test would reveal. The proxy ignores the URL's port and database, so a live "wrong database" case cannot be produced through it; gate 3 is exercised with scripted sessions and with the marker removed live. No hosted-Neon, deployment, or cloud check. Wrangler `4.148.0` versus `4.162.0` and the later-phase plan wording (Task 27 cursor, Phase 3 order, basic-feed wording, `importMarkdown` JSDoc) are deliberately **not** changed in this pass.
 
 **Stop point:** correction pass complete, awaiting independent Firstmate review. The database commits are not pushed.
+
+---
+
+### Delivery and workflow state (2026-11-14)
+
+| Item | State | Evidence |
+|---|---|---|
+| Phase 1, Tasks 1-7 | implemented, self-tested, **independently reviewed**, **pushed** | Firstmate `2026-11-14T145842Z-phase1.md`; pushed in `4f0207b` |
+| Phase 2 database spike, Tasks 8-10 | implemented, self-tested, **independently reviewed**, **pushed** | Firstmate `2026-11-14T171500Z-database-corrections.md` APPROVE; `origin/main` = `29538fb9def2ac9717c5310ffd8da564a69a0112` |
+| Tasks 11-21 | **not started** | no source for them exists |
+| Workflow setup (this branch) | implemented, self-tested, **not reviewed, not pushed, not merged** | branch `chore/workflow-setup`; commits listed in its review request |
+
+**Repository:** https://github.com/pauxiel/recallfeed, private. **Remote baseline pushed:** a normal fast-forward `4f0207b..29538fb` after checking the destination, clean tree, reviewed HEAD, that remote `main` was an ancestor of HEAD, and that no unreviewed commit was included. No force, squash, rebase, reset, or history rewrite.
+
+**Workflow setup branch:** `chore/workflow-setup`, cut from `29538fb` with `treehouse get --lease --base main -b chore/workflow-setup --lease-holder recallfeed-kiro --json`. The workspace is a linked git worktree distinct from the primary checkout; dependencies were installed there with `pnpm install --frozen-lockfile` on Node 22.23.3 and pnpm 10.18.3 from `.nvmrc` and `packageManager`. See `CONTRIBUTING.md` for the workflow, and the review request on this branch for the actual workspace path, lease id, and commits.
+
+**Planning corrections made on this branch (focused edits, specs untouched):** the selected local PostgreSQL/proxy transport recorded in Task 10 and the plan; the direct Wrangler pin aligned to 4.162.0 in Task 17, the plan, the proposal, and the agent config; the intermediate-versus-final API scope stated in the Phase 2 header, the Phase 2 checkpoint, and the plan; the CPU-budget claim corrected in the `importMarkdown` JSDoc, with benchmark criteria added to Tasks 15 and 19; Task 27's cursor wording corrected to `reviewCount` with the full-ordering requirement and an explicit open decision on cursor shape; Phase 3 execution order 24 → 22 → 23 with the checkpoint after Task 23.
+
+**Not changed, and why:** the approved specifications are untouched. Three places in them still carry wording this pass corrected elsewhere, for the user or Firstmate to decide: `.kiro/specs/01-core-domain.md` line 231 (`importMarkdown` "within CPU budget via 100 KB size limit"), `.kiro/specs/03-connectors.md` line 145 (a code comment "100 KB for free-tier CPU budget safety"; line 314 of the same spec already says the cap is chosen conservatively), and `.kiro/steering/technology-decisions.md` line 26 ("approximately 3-6 ms CPU" is an unmeasured estimate). Spec 04's cursor still describes a single `sortKey`. Spec 05 states OpenNext's `^4.148.0` Wrangler peer range, which is accurate. `Task 5`'s original acceptance text still says Wrangler 4.148.0; Task 5 is complete and its deviations are recorded.
+
+**Known limits of this setup:** `treehouse.toml` sets only `base_branch = "main"`; Treehouse printed identical status with and without it, so the file is unexercised, and the key comes from `treehouse get --help`. The shared database means only one integration run at a time; this was checked by confirming zero other connections before running. Automatic supervisor notification now requires local configuration (`FM_HOME`), so the Kiro hook no longer notifies by itself until that is set.
 
 ---
 
