@@ -14,6 +14,8 @@ Each task tracks three stages:
 2. **Verified:** Tests pass, build succeeds (record command output)
 3. **Reviewed:** Independent verification confirms acceptance criteria met (automated test suite or human check)
 
+**Delivery states (added 2026-11-14, see `CONTRIBUTING.md`):** two further states are kept distinct from the three above. **Pushed** = the commit is on the remote (record remote, branch, and the SHA read back from the server). **Merged** = the branch tip is contained in `main` (record the merge or fast-forward commit). Tasks 1-10 predate the extra fields; their pushed state is recorded in the execution records, and later tasks should add `- [ ] Pushed` and `- [ ] Merged` lines.
+
 **Format per task:**
 ```markdown
 **Status:**
@@ -22,7 +24,7 @@ Each task tracks three stages:
 - [ ] Reviewed (evidence: <test output or reviewer confirmation>)
 ```
 
-**Checkpoint boundaries:** Human approval required at phase boundaries (after tasks 7, 21, 24, 28, 30). Within a phase, "Reviewed" means independent verification (test suite run, not manual approval for every task).
+**Checkpoint boundaries:** Human approval required at phase boundaries (after Task 7, Task 21, **Task 23, which ends Phase 3 because Phase 3 runs 24 → 22 → 23**, Task 28, and Task 30). Within a phase, "Reviewed" means independent verification (test suite run, not manual approval for every task).
 
 **Do not advance to next phase until human reviews phase checkpoint.**
 
@@ -383,6 +385,8 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 
 ## Phase 2: Early Working Path - Protected Markdown Import (Tasks 8-21)
 
+> **Scope note (2026-11-14):** the Phase 2 checkpoint verifies an **intermediate** API, not the final Spec 05 contract. `GET /feed` returns a basic list with `limit` and no `cursor` or `nextCursor`; cursor pagination and strategy-based ordering arrive in Phase 4 (Tasks 25-27). Passing the Phase 2 checkpoint does not mean every Spec 05 response, ordering, and pagination contract passes. Tasks 19-21 are checked against their own acceptance criteria only. The `X-API-Key` curl examples need an explicitly public local configuration; the private default requires the trusted Access identity.
+
 ### Task 8: Create `@recallfeed/database` with Neon client
 
 **Description:** Scaffold database package with `@neondatabase/serverless` client. **Request-scoped connection factory** (HTTP connection, no pooling, no generic retry wrapper per Spec 02).
@@ -475,6 +479,7 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 - [ ] **Choose and document transport:**
   - Option A: `@neondatabase/serverless` client → local PostgreSQL via `postgresql://localhost:5432/recallfeed_test` (requires PostgreSQL server + Neon client's HTTP mode works locally)
   - Option B: `@neondatabase/serverless` client → authorized Neon test database via `postgresql://...neon.tech` (**authorization stop if cloud provisioning needed**)
+- **Selected 2026-11-14 (user-authorized, implemented in `f07e34d`, corrected in `1170b07`):** neither option as written. The transport is `@neondatabase/serverless` over HTTP to `ghcr.io/timowilhelm/local-neon-http-proxy` (pinned by digest) in front of a local PostgreSQL 17, run by Docker Compose under Colima; the URL host is `db.localtest.me`. An ordinary `localhost:5432` listener does not work with the HTTP client. No cloud resource is used; Option B stays unused.
 - [ ] **Note:** Neon's `neon(connectionString)` client uses HTTP internally; Option A requires local PostgreSQL + compatible setup, not just changing the URL scheme
 - [ ] `.env.test.example` created with `TEST_DATABASE_URL` placeholder
 - [ ] Test setup script: `packages/database/src/__tests__/setup.ts` runs migration on test DB
@@ -751,6 +756,7 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] `content_hash` generated via SHA-256 of content
 - [ ] Register in `connectorRegistry`: `connectorRegistry.set("markdown", new MarkdownConnector())`
 - [ ] Tests parse sample markdown with frontmatter and code blocks
+- [ ] **CPU evidence, not assumption:** add an informational benchmark that logs measured Workers CPU time for representative sizes (for example 1 KB, 10 KB, 50 KB, 100 KB, with and without many fenced code blocks), per the project convention for CPU-sensitive operations. The figures in the steering document (about 3-6 ms for 100 KB) are an estimate until this runs. The 100 KB cap limits input size; it does not by itself show the free-tier CPU budget is met.
 
 **Verification:**
 - [ ] `pnpm --filter @recallfeed/connectors test` passes markdown connector tests
@@ -817,7 +823,7 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 
 **Specification references:**
 - `.kiro/specs/05-authentication.md` — Visibility middleware
-- `.kiro/steering/technology-decisions.md` — Hono, Wrangler 4.148.0
+- `.kiro/steering/technology-decisions.md` — Hono, Wrangler deployment (that file names no Wrangler version; see the pin below)
 - Review 2026-11-14: Move Worker entry before POST /import/markdown verification
 
 **Dependencies:** Task 16
@@ -830,6 +836,7 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] `wrangler.toml` configured: `name = "recallfeed-api"`, `main = "src/index.ts"`, `compatibility_date`, `node_compat = false`
 - [ ] `wrangler.toml` bindings: `[vars]` for `FEED_VISIBILITY` (not secrets yet)
 - [ ] Middleware exports: `getVisibilityMode(env)` → "private" | "public"
+- [ ] **Wrangler pin (aligned 2026-11-14):** `wrangler` is a direct devDependency pinned to exactly `4.162.0`, the version `@cloudflare/vitest-plugin@1.8.2` already pins and this repository already tests, so one copy is installed. This replaces the earlier `4.148.0` plan. It satisfies OpenNext 1.20.x's `^4.148.0` peer range on paper only; it does **not** show that OpenNext, Next.js, or Cloudflare deployment works. That is verified in Gate 3, not here.
 
 **Verification:**
 - [ ] `pnpm --filter @recallfeed/api build` succeeds (or `wrangler deploy --dry-run`)
@@ -918,7 +925,7 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] Route: `POST /import/markdown`
 - [ ] Protected: Uses `requireOwner` or `requireApiKey` based on visibility mode
 - [ ] Accepts `Content-Type: text/markdown` (raw body) OR `Content-Type: application/json` with `{content, name?}`
-- [ ] **Request validation per Spec 05:** Min 10 bytes, max 100 KB
+- [ ] **Request validation per Spec 05:** Min 10 bytes, max 100 KB. The cap is an input limit, not evidence of CPU compliance; record the Task 15 benchmark results for the full import path (parse, hash, database round trips, card creation) before claiming the free-tier budget is met
 - [ ] **Delegates to FeedEngine:** Instantiate `FeedEngine`, call `feedEngine.importMarkdown(content, {name})`
 - [ ] **Response per Spec 05:** `{sourceId, queued, notesImported, feedItemsCreated}` (NOT `notesCreated, notesUpdated`)
 - [ ] Error responses: 400 (size), 401/403 (auth), 500 (import failure)
@@ -927,7 +934,7 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] Integration test with `TEST_DATABASE_URL`: POST markdown → verify notes and feed_items in PostgreSQL
 - [ ] Size validation tests: 9 bytes → 400, 101KB → 400, 50 bytes → 200
 - [ ] Negative auth test: No API key → 401
-- [ ] Manual: `wrangler dev`, authenticated curl with ≥10 bytes:
+- [ ] Manual: `wrangler dev`, authenticated curl with ≥10 bytes. **This `X-API-Key` example applies only to an explicitly public local configuration** (`FEED_VISIBILITY=public` and `API_SECRET_KEY` in the git-ignored `.dev.vars`). Under the private default, `requireOwner` needs the trusted Access identity and `X-API-Key` is not what authorizes the request:
   ```bash
   curl -X POST http://localhost:8787/import/markdown \
     -H "Content-Type: text/markdown" \
@@ -1043,11 +1050,13 @@ Content here"
 - [ ] Negative authorization tests pass (401, 403 where expected)
 - [ ] PostgreSQL integration tests pass (not SQLite mocks)
 - [ ] Early working path verified: `wrangler dev`, POST markdown, GET feed
-- [ ] All Spec 05 contracts followed (exact response fields, validation)
+- [ ] The Spec 05 contracts that Tasks 19-21 cover are followed (import response fields and validation, public DTO omissions, auth responses). The full `GET /feed` contract (cursor, `nextCursor`, strategy ordering) is **not** claimed here; it is checked at the Phase 4 checkpoint
 
 ---
 
 ## Phase 3: Review & Publish Mutations (Tasks 22-24)
+
+> **Execution order: Task 24 → Task 22 → Task 23** (Task 22 needs the review-event queries from Task 24). The task numbers keep their file order. Review the **whole phase** after Task 23; do not stop for review after Task 24, before the endpoint and its integration tests exist.
 
 ### Task 22: Implement PUT /feed/:id/review (all actions per Spec 05)
 
@@ -1161,7 +1170,7 @@ Content here"
 
 ---
 
-**PHASE 3 CHECKPOINT:** All Spec 05 review/publish actions work. Stop for human review before proceeding to Phase 4.
+**PHASE 3 CHECKPOINT:** reached only after Tasks 24, 22, and 23 are all done, in that order. All Spec 05 review/publish actions work. Stop for human review before proceeding to Phase 4.
 
 **Checkpoint criteria:**
 - [ ] PUT /feed/:id/review handles all 6 actions (reviewed, saved, unsaved, snoozed, published, unpublished)
@@ -1244,7 +1253,9 @@ Content here"
 
 ### Task 27: Implement strategy-dependent pagination cursors (sortKey + id per Spec 04)
 
-**Description:** Implement cursor encoding/decoding with **strategy-dependent sortKey** per Spec 04. Recency uses timestamp, importance uses score.
+**Description:** Implement cursor encoding/decoding with **strategy-dependent sortKey** per Spec 04. Recency uses the effective reviewed timestamp. Importance uses `reviewCount`, the actual ranking key from Spec 04 and Task 26; **there is no computed importance score** (Spec 04's `extractSortKey` returns `item.reviewCount`, and Task 26 removed the weighted score).
+
+**Cursor must encode the whole ordering.** The cursor has to carry every field the strategy sorts by, ending with `id`, or items that tie on the leading key are skipped or repeated at page boundaries. Recency orders by `effectiveReviewedAt`, then `id`. Importance orders by `reviewCount`, then `effectiveReviewedAt`, then `id` (Task 26). Spec 04 describes a single scalar `sortKey` plus `id`, which is not enough for the two-key importance order. **Open decision before this task starts:** settle the cursor shape (for example a `sortKey` that holds every ordering key) and record it as a Spec 04 clarification. Do not drop an ordering key to fit a single scalar.
 
 **Specification references:**
 - `.kiro/specs/04-feed-engine.md` — Pagination cursors with strategy-specific sortKey
@@ -1258,12 +1269,14 @@ Content here"
 - [ ] `decodeCursor(cursor)` returns `{id, sortKey}`
 - [ ] `extractSortKey(feedItem, strategy)` function:
   - Recency: Returns `lastReviewedAt ?? createdAt` timestamp
-  - Importance: Returns computed importance score
+  - Importance: Returns `reviewCount` together with the later ordering keys (`effectiveReviewedAt`), per the cursor shape settled above; no computed score
 - [ ] GET /feed uses strategy-specific sortKey for cursor generation
+- [ ] The cursor encodes every ordering key of the active strategy plus `id`
 
 **Verification:**
 - [ ] Unit tests: Encode/decode cursor round-trip
-- [ ] Integration test: GET /feed with recency → cursor contains timestamp, GET /feed with importance → cursor contains score
+- [ ] Pagination test with **ties**: several items with equal `reviewCount` (and equal `effectiveReviewedAt`) split across pages; walking every page returns each item exactly once, none skipped or repeated
+- [ ] Integration test: GET /feed with recency → cursor contains timestamp, GET /feed with importance → cursor contains `reviewCount` and the tie-break keys
 
 **Status:**
 - [ ] Implemented (commit: _______)
@@ -1315,7 +1328,7 @@ Content here"
 **Checkpoint criteria:**
 - [ ] Recency strategy sorts oldest first (ascending)
 - [ ] Importance strategy scores and ranks correctly
-- [ ] Strategy-dependent pagination cursors work (timestamp for recency, score for importance)
+- [ ] Strategy-dependent pagination cursors work (timestamp for recency, `reviewCount` plus tie-break keys for importance; no computed score)
 - [ ] Highlight card generator creates cards
 - [ ] All feed-engine tests pass
 
