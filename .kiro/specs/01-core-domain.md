@@ -228,7 +228,8 @@ interface IFeedEngine {
   /**
    * Imports Markdown content directly.
    * Content is passed explicitly as a parameter, not retrieved from database.
-   * Always synchronous (within CPU budget via 100 KB size limit).
+   * Always synchronous. The 100 KB input limit bounds the work per request; it does not by itself
+   * show the free-tier CPU budget is met (see the Spec 03 checklist for the measured results).
    * Creates or updates a Source record with type="markdown".
    */
   importMarkdown(content: string, sourceMetadata: { name: string }): Promise<ImportResult>;
