@@ -644,9 +644,11 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] Upsert idempotency verified: Insert same name twice, returns same `id`
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `TEST_DATABASE_URL=... pnpm test`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `da29fbc`)
+- [x] Verified (self-tested: 2026-11-14, Node 22.23.3, pnpm 10.18.3, PostgreSQL 17.12 fixture: `upsertSource`, `getSourceById`, `updateSourceSyncedAt` tested against the real database through the Neon-compatible proxy (database package: 114 workerd + 17 node tests, 0 skipped with `TEST_DATABASE_URL`; 61 + 13 pass and 53 + 4 skip without it). No unique index on `sources.name` exists (Spec 02 approved, no schema change), so `upsertSource` takes a transaction-scoped advisory lock and runs a CTE upsert; a deterministic lock-wait test replaced a probabilistic race test after mutation checks showed the latter was weak. See full gate in the Phase 2 Execution Record below.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `phase/gate2-phase2-markdown-slice` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/database/src/queries/sources.ts`
@@ -680,9 +682,11 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] Re-import test passes: Same source, same hash → 1 row, updated timestamp
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `TEST_DATABASE_URL=... pnpm test`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `da29fbc`)
+- [x] Verified (self-tested: 2026-11-14: `upsertNotes` (batch `jsonb_to_recordset` with `ON CONFLICT (source_id, content_hash)`), `upsertNote`, `getNotesBySourceId`, `getNotesMissingCardType` tested against real PostgreSQL, including source-scoped dedup (same text under two sources is two notes), parameterized-SQL injection strings, and empty batches. One mutant (`getNotesMissingCardType` returning all notes) is equivalent in effect except payload size. See full gate in the Phase 2 Execution Record below.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `phase/gate2-phase2-markdown-slice` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/database/src/queries/notes.ts`
@@ -717,9 +721,11 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] `onlyPublished=true` test returns only `is_published=true` rows
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `TEST_DATABASE_URL=... pnpm test`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `da29fbc`)
+- [x] Verified (self-tested: 2026-11-14: `insertFeedItems`, `insertFeedItem`, `getFeedItemCandidates` (published and snooze filters, fixed order `COALESCE(last_reviewed_at, created_at) ASC, id ASC`), `getFeedItemById` tested against real PostgreSQL. **Deviation:** `afterId`/`afterSortKey` (cursor inputs) are deliberately not implemented; the multi-key cursor shape is an open decision for Task 27 (Spec 04 single scalar `sortKey` vs Task 26's two-key importance order), so no final strategy-dependent pagination is claimed. See full gate in the Phase 2 Execution Record below.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `phase/gate2-phase2-markdown-slice` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/database/src/queries/feed-items.ts`
@@ -752,9 +758,11 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] Import succeeds: `import { connectorRegistry } from '@recallfeed/connectors'`
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `pnpm --filter @recallfeed/connectors build`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `6381ef3`)
+- [x] Verified (self-tested: 2026-11-14: `pnpm --filter @recallfeed/connectors build` and typecheck exit 0. **Deviation:** the registry is a class (`register`/`get`, throws `CONNECTOR_NOT_FOUND`), as Spec 03 defines it, not the `Map` this task sketched. Only the Markdown connector is registered; Notion is deferred. See full gate in the Phase 2 Execution Record below.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `phase/gate2-phase2-markdown-slice` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/connectors/package.json`
@@ -792,9 +800,11 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] Parsing test: `"# Note 1\n\nContent\n\n---\n\n# Note 2"` → 2 NormalizedNote objects
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `pnpm --filter @recallfeed/connectors test`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `6381ef3`)
+- [x] Verified (self-tested: 2026-11-14: connectors package, 57 tests pass (0 skipped), plus an informational benchmark file. **Deviations:** `marked` 18.2.0 is used where Spec 03 names ^9.1.6 (the token shapes this connector reads were checked identical); hashing uses async `crypto.subtle.digest` because the spec's `digestSync` does not exist; `sourceCreatedAt` is set only from a frontmatter date. This task's example `# Note 1 ... --- # Note 2` yields one note under Spec 03 (empty sections are dropped); the spec governs. A `marked` stack overflow on deeply nested input is caught and degrades to one plain-text note. See full gate in the Phase 2 Execution Record below.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `phase/gate2-phase2-markdown-slice` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/connectors/src/markdown.ts`
@@ -829,9 +839,11 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] `pnpm --filter @recallfeed/feed-engine test` passes (unit tests for FeedEngine.importMarkdown and original generator)
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `pnpm --filter @recallfeed/feed-engine build && test`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `524c1b8`)
+- [x] Verified (self-tested: 2026-11-14: feed-engine package, 38 tests pass with the database (17 pass, 21 skip without); build, typecheck, lint exit 0. A 300-note import measured 5 HTTP requests to the database (4 on repeat), against the free-tier limit of 50. `FeedEngine.importMarkdown` returns `{ sourceId, queued, notesImported, feedItemsCreated }` (`notesImported` = notes now stored, `feedItemsCreated` = cards created by this call). See full gate in the Phase 2 Execution Record below.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `phase/gate2-phase2-markdown-slice` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/feed-engine/package.json`
@@ -872,9 +884,11 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] `wrangler dev` starts local server (no routes yet, returns 404)
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `wrangler dev` starts on localhost:8787)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `6a892d7` (package, configs), `3996cdb` (Worker entries, `wrangler.toml`, `wrangler.local.toml`))
+- [x] Verified (self-tested: 2026-11-14: `wrangler dev --config wrangler.local.toml` (wrangler 4.162.0, pinned) started and served requests from `src/dev-entry.ts` on port 8799 (the default is 8787; this run chose a port to avoid a clash). Production `src/index.ts` passes `env` and `ctx` through and never routes the local database proxy (tested). `wrangler.toml` defaults `FEED_VISIBILITY` to `private`. `.dev.vars` used for the smoke test was git-ignored and deleted afterwards. **Limit:** `wrangler dev` has no Cloudflare Access, so local dev runs the public mode; private mode is verified through the test suite with a real `ctx.access` interface. See full gate in the Phase 2 Execution Record below.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `phase/gate2-phase2-markdown-slice` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/api/package.json`
@@ -924,9 +938,11 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 - [ ] Cache header test: Private responses include `Cache-Control: private, no-store`
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `pnpm --filter @recallfeed/api test` including negative tests + CSRF/cache)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `6a892d7`, tests added in `d53caab`)
+- [x] Verified (self-tested: 2026-11-14: 104 middleware tests pass in workerd with no database; 6 mutation checks on the auth, CSRF and redaction code were caught, and all 6 mutants of the error handler were caught. **Decisions where an approved spec wins over this task:** an invalid key is 403 `AUTH_API_KEY_INVALID` and a missing key is 401 `AUTH_API_KEY_MISSING` (Spec 05; this task said 401 for both); `requireApiKey` always enforces the key (the Spec 05 sketch passed through in private mode). Identity comes only from `ctx.access.getIdentity()`; no header, cookie or query value can supply one. Visibility fails closed: only the exact string `public` is public. CSRF runs before auth and is private-mode only. No permissive placeholder or production bypass exists. See full gate in the Phase 2 Execution Record below.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `phase/gate2-phase2-markdown-slice` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/api/src/middleware/auth.ts`
@@ -975,9 +991,11 @@ Content here"
   Response matches Spec 05: `{sourceId, queued, notesImported, feedItemsCreated}`
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: integration test + manual curl)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `3996cdb`)
+- [x] Verified (self-tested: 2026-11-14: 41 import tests against real PostgreSQL (public API key and private owner paths; 401/403 and CSRF with nothing written; size 9/10 bytes and 100 KB / +1 byte boundaries; streamed bodies of unknown length are cut off shortly after the cap; content-type, UTF-8, JSON shape; duplicate import creates no cards; SQL-injection text stored literally; exact four-field response). Mutation checks: 9 of 9 import mutants caught (two survivors from the first round led to a new streaming-read test). Manual smoke through `wrangler dev` and the proxy: no key 401, wrong key 403, import 200 with `notesImported 2, feedItemsCreated 2`, repeat `feedItemsCreated 0`. See full gate in the Phase 2 Execution Record below.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `phase/gate2-phase2-markdown-slice` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/api/src/routes/import.ts`
@@ -1020,9 +1038,11 @@ Content here"
 - [ ] Public DTO test: Verify omitted fields not in response
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: integration test + negative tests)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `3996cdb`)
+- [x] Verified (self-tested: 2026-11-14: 27 tests against real PostgreSQL (public: published-only, exact six public keys, snoozed hidden, limit 1-50 with invalid values 400 not clamped, `?cursor=` 400 `VALIDATION_CURSOR_UNSUPPORTED`; private: owner sees all fields, 401 anonymous, 403 other user, a valid API key does not open it, no `FEED_VISIBILITY` is private, `private, no-store` on every response including errors). Tests give each seeded card a review time older than every earlier card so they stay on the first page of the shared fixture. 9 of 10 route mutants caught; the survivor (the route's own limit bounds check) is equivalent because the engine repeats the check. **Scope:** returns `{ items }` with no `nextCursor`; cursor pagination and strategy ordering are Phase 4. See full gate in the Phase 2 Execution Record below.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `phase/gate2-phase2-markdown-slice` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/api/src/routes/feed.ts`
@@ -1058,9 +1078,11 @@ Content here"
 - [ ] Negative test: Private mode, no auth → 401
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: integration test + negative tests)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `3996cdb`)
+- [x] Verified (self-tested: 2026-11-14: 9 tests against real PostgreSQL (public: published card returns exactly six keys; an unpublished card, a missing card, a malformed ID and an injection string return the identical 404 body; identity does not unlock an unpublished card in public mode; private: owner reads all fields, 401/403 do not reveal whether a card exists, 404 carries the private cache policy, missing or unrecognized `FEED_VISIBILITY` never serves anonymously). Mutations on this route are covered by the Task 20 run. See full gate in the Phase 2 Execution Record below.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `phase/gate2-phase2-markdown-slice` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/api/src/routes/feed.ts` (update with `:id` route)
@@ -1072,7 +1094,7 @@ Content here"
 
 **PHASE 2 CHECKPOINT:** Complete protected path works end-to-end. Stop for human review before proceeding to Phase 3.
 
-**Checkpoint criteria:**
+**Checkpoint criteria** (self-verification evidence is in the Phase 2 Execution Record; the boxes stay unchecked until the human review at this checkpoint):
 - [ ] POST /import/markdown with real authorization → PostgreSQL → original cards → response (Spec 05 contract)
 - [ ] GET /feed with owner authorization (private) or public filtering (public)
 - [ ] GET /feed/:id with authorization and public DTO omissions
@@ -1080,6 +1102,49 @@ Content here"
 - [ ] PostgreSQL integration tests pass (not SQLite mocks)
 - [ ] Early working path verified: `wrangler dev`, POST markdown, GET feed
 - [ ] The Spec 05 contracts that Tasks 19-21 cover are followed (import response fields and validation, public DTO omissions, auth responses). The full `GET /feed` contract (cursor, `nextCursor`, strategy ordering) is **not** claimed here; it is checked at the Phase 4 checkpoint
+
+---
+
+## Phase 2 Execution Record (Tasks 11-21)
+
+Branch `phase/gate2-phase2-markdown-slice`, started at `8222b7c`, local only. Not pushed, not merged, not reviewed. Tasks 22 and later are not started.
+
+**Commits:** `da29fbc` (Tasks 11-13), `6381ef3` (14-15), `524c1b8` (16), `6a892d7` (17-18 middleware layer), `3996cdb` (17, 19-21 routes, entries, README), `ab7be8d` (CPU wording in specs and steering), `d53caab` (error-handler tests), `81f3fc1` (Turbo env fix, order-independent seeding, coverage scope). This record is committed after them.
+
+**Gate at `81f3fc1`** (Node 22.23.3, pnpm 10.18.3, PostgreSQL 17.12 fixture through the Neon-compatible proxy; build outputs, `.turbo` and `coverage` removed first; `TURBO_FORCE=true`, so nothing replayed from cache):
+
+| Check | Result |
+|---|---|
+| `pnpm lint` | exit 0 |
+| `pnpm build` | exit 0, 5 of 5 tasks, 0 cached |
+| `pnpm typecheck` | exit 0, 5 of 5 tasks, 0 cached |
+| `pnpm test` with no `TEST_DATABASE_URL` | exit 0. **Skips:** api 108 pass / 78 skip; database 61 / 53 (workerd) and 13 / 4 (node); feed-engine 17 / 21; connectors 57 / 0; core 10 / 0. This is unit-only and is **not** database validation. |
+| `pnpm test:integration` (same tests against real PostgreSQL, packages run one at a time) | exit 0, **0 skipped**: api 186, database 114 + 17, feed-engine 38, connectors 57, core 10. Run twice in a row at an earlier revision with the same totals after the final fixes. |
+| `pnpm test:coverage` with the database | exit 0, 28 files, 422 tests. All files: 96.09% statements, 91.98% branches, 98.21% functions, 95.97% lines (threshold 80% each). Scope widened from core, database and feed-engine to include connectors and api. |
+
+The 1,000-line `max-lines` rule is part of `pnpm lint` above.
+
+**Protected import-to-feed path, exercised for real:** the tests drive the real Hono app inside `workerd` against real PostgreSQL. Separately, `wrangler dev --config wrangler.local.toml` was started by hand with a git-ignored `.dev.vars` (fake key, deleted afterwards) and exercised with `curl`: no key gave 401 `AUTH_API_KEY_MISSING`; a wrong key gave 403 `AUTH_API_KEY_INVALID`; a valid import returned `notesImported 2, feedItemsCreated 2`; the repeat returned `feedItemsCreated 0`; `GET /feed` returned only the six public keys; an unpublished card by ID gave 404; after `is_published` was set directly in the database the same ID returned 200 with six keys; `?cursor=` and `?limit=0` gave 400. The wrangler processes were stopped afterwards.
+
+**Performance evidence (local; this is not Cloudflare billed CPU time).** Local `workerd` timers advance, so these are real measurements, but they include Miniflare overhead and the local proxy, and they do not reproduce Cloudflare's billing.
+- Parse and hash only, in-process, elapsed milliseconds (`markdown.bench.test.ts`, informational): 100 KB prose median 8 ms, code 4 ms, mixed 6 ms; 4,000 tiny notes from 46 KB took 17 ms.
+- Whole import request through `wrangler dev`, `workerd` process CPU from `ps` (10 ms resolution, summed over many requests), 40 requests per case after a warm-up, idle baseline 0.00 s: one small note about 5.2 ms CPU per request; 300 tiny notes (about 7 KB) about 10.0 ms; 100 KB prose about 10.8 ms. Median elapsed time per request was about 390-420 ms, almost all waiting on the database proxy, which is not CPU.
+- Database requests per import: 5 for a 300-note import, 4 on a repeat (free-tier subrequest limit is 50).
+- **Conclusion:** the 10 ms free-tier CPU budget is neither shown to be met nor shown to be exceeded. 100 KB and many-note imports sit close to it locally, so it stays a real risk. Only a deployed Worker can settle it, and no deployment is part of this phase. The 100 KB input limit and the performance requirement are unchanged; the unsupported guarantees ("within CPU budget via 100 KB", "3-6 ms CPU") were replaced with these measurements (`ab7be8d`).
+
+**Where an approved spec won over this todo** (also noted per task): invalid API key is 403 and missing is 401 (Spec 05); connector registry is a class, not a `Map` (Spec 03); factory is `createDb` (Specs 02 and 07); `marked` 18.2.0 instead of ^9.1.6 (token shapes verified identical); no unique index on `sources.name` (Spec 02 approved, no migration), so `upsertSource` uses an advisory lock; cursor inputs for `getFeedItemCandidates` and `GET /feed` are deferred to Phase 4, with `?cursor=` rejected as 400 instead of ignored.
+
+**Problems found and fixed while verifying (recorded so a reviewer can check them):**
+- `pnpm test` with `TEST_DATABASE_URL` set still skipped every database test, because Turbo's strict env mode dropped the variable. The result looked green and was not database validation. `turbo.json` now declares the variable for the `test` task, a root `test:integration` script exists, and CONTRIBUTING says to read the skipped counts.
+- Two suites seeded cards with different fixed review dates on the shared database, so one suite's cards could fall off the first page of the other. Both now use a review time older than every earlier card.
+- Several of my own tests were wrong, not the application: unique values placed in a heading, which the note hash ignores; a private-mode request without `Origin`, which CSRF correctly refused before auth; and a made-up `X-Source-Name` header I briefly wrote before checking the route. All were fixed in the tests.
+- Mutation checks found two weak spots (body-size caps that returned the same 400 either way); a streaming-read test now measures how many bytes the Worker pulled.
+
+**Known limits:**
+- Private mode cannot run under `wrangler dev` (no Cloudflare Access). It is verified through the test suite with a `ctx.access` object shaped like the real one, not against a real Access deployment.
+- Nothing has been deployed, so no behavior on Cloudflare itself (billed CPU, real Neon over the internet, real Access) is claimed.
+- The shared fixture showed 20 idle client connections after earlier runs, with no process of mine alive; they were idle and did not interfere. Their owner was not identified beyond the local proxy.
+- `wrangler` 4.162.0 is pinned exactly in `packages/api`. No OpenNext or deploy test exists.
 
 ---
 
