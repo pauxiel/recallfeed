@@ -38,6 +38,10 @@ pnpm --filter @recallfeed/database db:test:down        # discards the disposable
 `pnpm test` with `TEST_DATABASE_URL` set also reaches the database (`turbo.json` passes that variable
 to the `test` task). Either way, read the skipped count in each package's summary.
 
+`pnpm test:coverage` is one complete run of every package's tests with coverage thresholds (80%). It runs
+files one at a time (`--no-file-parallelism`): run from the root, Vitest would otherwise overlap packages on
+the shared database. With `TEST_DATABASE_URL` set it is also a full database run, which is what CI executes.
+
 Details, the reset safeguards, and limits are in `packages/database/README.md`.
 
 **Run one database integration at a time.** `pnpm test` runs the packages one after another (`--concurrency=1`), and each package's test files run one at a time, because every package's integration tests share one database. The Compose project name (`recallfeed-test`) and the
