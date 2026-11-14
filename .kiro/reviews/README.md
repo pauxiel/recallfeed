@@ -81,7 +81,8 @@ Immutable handoff documents written by Kiro at milestone completion.
 **Action:** Executes `.kiro/hooks/scripts/notify-firstmate.sh`
 
 **Behavior:**
-- Finds most recent review request in `.kiro/reviews/requests/`
+- Finds the newest review request in `.kiro/reviews/requests/` **by file name** (names start with `YYYYMMDD-HHMMSS`). File modification times are not used, because a fresh checkout or worktree gives every file the same time and would pick an arbitrary request
+- Refuses to announce a request that is not committed, or that has uncommitted edits, because only a committed request is immutable
 - Checks if already submitted (via `.kiro/reviews/.last-submitted` marker)
 - Generates unique request ID: `recallfeed-YYYYMMDD-HHMMSS-phase`
 - Sends JSON notification to Firstmate inbox
@@ -113,12 +114,24 @@ Immutable handoff documents written by Kiro at milestone completion.
 }
 ```
 
-**Firstmate Command:**
+**Firstmate Command** (run by the script; `FM_HOME` comes from local configuration, see below):
 ```bash
-FM_HOME=/Users/paulobayuwana/Documents/projects/firstmate \
-  /Users/paulobayuwana/Documents/projects/firstmate/bin/fm-inbox.sh \
-  note --json --request-id "$REQUEST_ID" -
+FM_HOME="$FM_HOME" "$FM_HOME/bin/fm-inbox.sh" note --json --request-id "$REQUEST_ID" -
 ```
+
+**Local configuration (optional, never committed):** the script does nothing unless the supervisor
+integration is configured, so building and testing never depend on it. Either export `FM_HOME`,
+or put `FM_HOME=<path>` in `${XDG_CONFIG_HOME:-$HOME/.config}/recallfeed/firstmate.env`, a file
+outside the repository. Do not put personal paths or credentials in tracked files.
+
+**Workspace-aware payload:** the notification names the checkout the script ran in, which may be
+an isolated git worktree and not the primary checkout. Fields added beyond the original format:
+`workspace_path`, `isolated_workspace`, `primary_checkout_path`, `branch`, `commit` (HEAD),
+`request_commit` (the commit that last changed the request file), and `request_sha256`. A reviewer
+should read the request from `workspace_path`, at `commit`, and compare `request_sha256`.
+
+**Dry run:** `bash .kiro/hooks/scripts/notify-firstmate.sh --dry-run` prints the notification and
+sends nothing, writes no marker, and does not need `FM_HOME`.
 
 **Exit Codes:**
 - 0: Success (notification delivered or no new requests)
@@ -176,7 +189,7 @@ A smoke test was conducted on 2026-11-07 18:36:08 UTC:
 
 **Command:**
 ```bash
-cd /Users/paulobayuwana/Documents/projects/recallfeed
+# from the checkout (or isolated workspace) that contains the committed request
 bash .kiro/hooks/scripts/notify-firstmate.sh
 ```
 
@@ -271,7 +284,7 @@ bash .kiro/hooks/scripts/notify-firstmate.sh
 
 If hook doesn't trigger, manually run:
 ```bash
-cd /Users/paulobayuwana/Documents/projects/recallfeed
+# from the checkout (or isolated workspace) that contains the committed request
 bash .kiro/hooks/scripts/notify-firstmate.sh
 ```
 
@@ -318,7 +331,7 @@ mv .kiro/reviews/requests/YYYYMMDD-HHMMSS-phase.md \
 - Path mismatch or permission issue
 
 **Solutions:**
-- Check Firstmate readiness: `FM_HOME=/Users/paulobayuwana/Documents/projects/firstmate /Users/paulobayuwana/Documents/projects/firstmate/bin/fm-inbox.sh ready`
+- Check supervisor readiness: `"$FM_HOME/bin/fm-inbox.sh" ready`
 - Verify FM_HOME path matches actual Firstmate installation
 - Check script has correct path to `fm-inbox.sh`
 
