@@ -1,0 +1,30 @@
+{
+  "name": "recallfeed",
+  "version": "0.0.0",
+  "private": true,
+  "description": "RecallFeed: a reusable, frontend-agnostic personal knowledge-feed skeleton.",
+  "type": "module",
+  "packageManager": "pnpm@10.18.3",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit -p tsconfig.json && turbo run typecheck",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.8.2",
+    "@cloudflare/workers-types": "^5.20261114.1",
+    "@eslint/js": "^10.0.1",
+    "@vitest/coverage-istanbul": "^4.1.12",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
+    "turbo": "^2.11.11",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.72.2",
+    "vitest": "^4.1.12"
+  }
+}
