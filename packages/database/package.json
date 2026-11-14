@@ -1,0 +1,32 @@
+{
+  "name": "@recallfeed/database",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "description": "RecallFeed PostgreSQL schema, migrations, and Neon client factory.",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json && tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:integration": "TEST_DATABASE_URL=${TEST_DATABASE_URL:-postgres://postgres:postgres@db.localtest.me:5432/recallfeed_test} vitest run",
+    "lint": "eslint .",
+    "db:migrate": "tsx src/migrate-cli.ts",
+    "db:test:up": "docker-compose -f docker/compose.test.yaml up -d --wait",
+    "db:test:down": "docker-compose -f docker/compose.test.yaml down -v"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.1",
+    "@recallfeed/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.2",
+    "ws": "^8.23.0"
+  }
+}

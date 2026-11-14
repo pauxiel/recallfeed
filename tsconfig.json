@@ -8,8 +8,17 @@
   },
   "include": [
     "packages/*/src/**/*.ts",
-    "packages/*/*.config.ts",
     "vitest.config.ts"
   ],
-  "exclude": ["**/node_modules", "**/dist", "**/coverage"]
+  // Node-only scripts are checked by their package's tsconfig.node.json, because they use
+  // Node globals that the Workers type set deliberately omits.
+  "exclude": [
+    "**/node_modules",
+    "**/dist",
+    "**/coverage",
+    "packages/*/src/**/*-node.ts",
+    "packages/*/src/**/*-cli.ts",
+    "packages/*/src/__tests__/setup.ts",
+    "packages/*/vitest.config.ts"
+  ]
 }

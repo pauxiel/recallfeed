@@ -4,6 +4,9 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": false,
+    // A failed compile must not write files: tsc emits on error by default, and stray
+    // .js files next to .ts sources shadow them in Vite and silently break tests and coverage.
+    "noEmitOnError": true,
     "declaration": true,
     "outDir": "dist",
     "rootDir": "src"

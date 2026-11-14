@@ -3,6 +3,8 @@ node_modules/
 .pnpm-store/
 
 # Build outputs
+# Handwritten sources are TypeScript, so a .js file under src/ is always stray compiler output.
+packages/*/src/**/*.js
 dist/
 build/
 coverage/
@@ -18,6 +20,7 @@ out/
 .env.*.local
 .env.*
 !.env.example
+!.env.*.example
 .dev.vars
 *.dev.vars
 

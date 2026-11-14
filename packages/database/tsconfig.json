@@ -1,0 +1,15 @@
+{
+  // Code that runs inside a Worker: the client factory, query code, and the migration
+  // logic. Node-only scripts are checked by tsconfig.node.json, tests by tsconfig.test.json.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "src/**/__tests__/**",
+    "src/**/*.test.ts",
+    "src/migrate-node.ts",
+    "src/migrate-cli.ts"
+  ]
+}

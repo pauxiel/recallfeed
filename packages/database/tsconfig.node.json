@@ -1,0 +1,14 @@
+{
+  // Scripts that run in Node through tsx or vitest's Node process, never in a Worker.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": [
+    "src/migrate-node.ts",
+    "src/migrate-cli.ts",
+    "src/__tests__/setup.ts",
+    "src/__tests__/provided-context.d.ts",
+    "vitest.config.ts"
+  ]
+}

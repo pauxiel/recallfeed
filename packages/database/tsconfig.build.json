@@ -1,0 +1,16 @@
+{
+  // Proves the package compiles and emits JavaScript and declarations to dist/.
+  // Inside the monorepo, consumers import src/index.ts directly (no build step), and
+  // this package imports @recallfeed/core as source too. So there is deliberately no
+  // `rootDir`: tsc mirrors the layout, with core's files under dist/core/src and this
+  // package's under dist/database/src. Nothing consumes dist/.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    // A failed compile must not write files: tsc emits on error by default, and stray
+    // .js files next to .ts sources shadow them in Vite and silently break tests and coverage.
+    "noEmitOnError": true,
+    "declaration": true,
+    "outDir": "dist"
+  }
+}

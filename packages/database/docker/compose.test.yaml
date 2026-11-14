@@ -1,0 +1,47 @@
+# Disposable PostgreSQL 17 plus a local Neon-compatible HTTP proxy, used only by
+# @recallfeed/database integration tests.
+#
+# Start:    docker-compose -f packages/database/docker/compose.test.yaml up -d --wait
+# Stop:     docker-compose -f packages/database/docker/compose.test.yaml down -v
+# Connect:  postgres://postgres:postgres@db.localtest.me:5432/recallfeed_test
+#           (the Neon driver sends the query over HTTP to http://db.localtest.me:4444/sql)
+#
+# Isolation rules:
+#   * The compose project name is `recallfeed-test`. Development databases must use a
+#     different project name, volume, and ports so the two never share data.
+#   * Postgres data lives on tmpfs, so it disappears when the container stops.
+#   * Postgres publishes no port. Only the proxy is reachable from the host, and only
+#     on 127.0.0.1 (never 0.0.0.0).
+#   * The credentials below protect a throwaway database that exists only on this
+#     machine's loopback interface. They are not secrets and must not be reused.
+#
+# Images are pinned by digest. Update them deliberately and re-run the database tests.
+#   postgres:17                                     -> PostgreSQL 17.12 (Debian), arm64 + amd64
+#   ghcr.io/timowilhelm/local-neon-http-proxy:main  -> community image (TimoWilhelm, CC0-1.0),
+#                                                      built 2026-03-27 from Neon proxy release 8853
+name: recallfeed-test
+
+services:
+  postgres:
+    image: postgres:17@sha256:846a7ddaa67a4b354ae1d21087b683901aa6113a4ed626d3787cfbf6c85e3e07
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: recallfeed_test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d recallfeed_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  neon-proxy:
+    image: ghcr.io/timowilhelm/local-neon-http-proxy@sha256:cd2ae14edf2feafbc3330492de5c80506f77274c3bd013154cdef697bdeb768a
+    environment:
+      PG_CONNECTION_STRING: postgres://postgres:postgres@postgres:5432/recallfeed_test
+    ports:
+      - "127.0.0.1:4444:4444"
+    depends_on:
+      postgres:
+        condition: service_healthy
