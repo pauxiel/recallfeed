@@ -214,10 +214,15 @@ describe.skipIf(databaseUrl === "")("FeedEngine (real PostgreSQL through the pro
       const cards = await db.query("SELECT id FROM feed_items WHERE source_id = $1", [result.sourceId]);
       const id = cards[0]?.id as string;
       // The feed is capped at one page and ordered oldest-first, and the shared database holds
-      // many cards. An old review time puts this card at the front of every list, so the tests
-      // below do not depend on how much else is in the database.
+      // many cards, some seeded by other suites. A review time older than every card seeded before
+      // this one (the clock only moves forward, so each later card is older still) puts this card at
+      // the front of every list, whatever else is in the database. A fixed date would not: another
+      // suite's cards can sort ahead of it.
       await db.query(
-        "UPDATE feed_items SET last_reviewed_at = TIMESTAMPTZ '2000-01-01', is_published = $2 WHERE id = $1",
+        `UPDATE feed_items
+            SET last_reviewed_at = TIMESTAMPTZ '1900-01-01' - EXTRACT(EPOCH FROM clock_timestamp()) * interval '1 second',
+                is_published = $2
+          WHERE id = $1`,
         [id, published],
       );
       return { db, id, engine: new FeedEngine(db) };

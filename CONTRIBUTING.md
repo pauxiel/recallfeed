@@ -31,8 +31,12 @@ skipped count:
 ```sh
 pnpm --filter @recallfeed/database db:test:up          # needs a container runtime, for example Colima
 pnpm --filter @recallfeed/database test:integration    # prints 0 skipped when the database is used
+pnpm test:integration                                  # every package against the same database, one at a time
 pnpm --filter @recallfeed/database db:test:down        # discards the disposable data
 ```
+
+`pnpm test` with `TEST_DATABASE_URL` set also reaches the database (`turbo.json` passes that variable
+to the `test` task). Either way, read the skipped count in each package's summary.
 
 Details, the reset safeguards, and limits are in `packages/database/README.md`.
 
