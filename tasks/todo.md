@@ -1,6 +1,6 @@
 # RecallFeed Implementation Tasks — Gate 2 (Corrected)
 
-**Status:** Phase 1 (Tasks 1-7) implemented and self-verified 2026-11-14; stopped at the Phase 1 checkpoint awaiting independent Firstmate review. Phases 2-5 are not authorized. See "Phase 1 Execution Record" below the Phase 1 checkpoint.  
+**Status:** Phase 1 (Tasks 1-7) implemented, verified, and independently reviewed by Firstmate 2026-11-14 (APPROVE WITH CONDITIONS at `a2ce7c6`; Node metadata condition corrected, see Phase 1 Follow-up). Phases 2-5 are not authorized. See "Phase 1 Execution Record" below the Phase 1 checkpoint.  
 **Based on:** `tasks/plan.md` (corrected per 2026-11-14 planning review)  
 **Tracking:** Markdown checklist with explicit Implemented/Verified/Reviewed state
 
@@ -59,7 +59,7 @@ Each task tracks three stages:
 **Status:**
 - [x] Implemented (commit: `9d09c0b`, `chore: initialize repository with approved Gate 1 artifacts`, 68 files, branch `main`)
 - [x] Verified (2026-11-14, `git status` → "nothing to commit, working tree clean"; `git ls-files .kiro/ | wc -l` → 56; `git check-ignore -v .kiro/specs/01-core-domain.md` → exit 1, not ignored. Secrets inspection: regex scan of all 67 pre-existing files for AWS/GitHub/OpenAI/Anthropic/Notion/Slack token shapes, PEM private keys, JWTs, credentialed connection URLs, and literal values assigned to `DATABASE_URL`/`*_KEY`/`TOKEN`/`PASSWORD` → 0 matches; read `.kiro/hooks/scripts/notify-firstmate.sh` in full → no credentials, but it contains the local absolute path `/Users/paulobayuwana/Documents/projects/firstmate`. `.gitignore` additions: `build/`, `coverage/`, `.env.*` with `!.env.example`.)
-- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14T145842Z-phase1.md`: APPROVE WITH CONDITIONS, reviewed HEAD `a2ce7c6`; the one condition, Node metadata, is corrected in the follow-up commit below and that correction is not yet independently re-reviewed)
 
 **Execution notes:** `tasks/todo-old.md`, `tasks/todo-backup-cycle3.md`, `.kiro/agents/recallfeed.json.bak`, and `.kiro/specs/06-inngest-workflows.md.bak` were committed as found. They are superseded clutter; removing them needs a separate decision.
 
@@ -95,7 +95,7 @@ Each task tracks three stages:
 **Status:**
 - [x] Implemented (commit: `cd16dfb`, `chore: add pnpm workspace, Turborepo, and ESLint max-lines toolchain`)
 - [x] Verified (2026-11-14, Node 22.23.3: `pnpm lint` → exit 0. ESLint lints 9 files: `eslint.config.mjs`, root `vitest.config.ts`, `packages/core/vitest.config.ts`, and 6 core `.ts` files including both tests. `eslint --print-config` resolves `max-lines` to `[2, {max:1000, skipBlankLines:false, skipComments:false}]` for `packages/core/src/index.ts`, a `*.test.ts` file, and a config file. Negative control: temporary files of 1000 lines passed; 1001-line `.ts`, `.test.ts`, and `.config.mjs` files each failed with `File has too many lines (1001). Maximum allowed is 1000`; control files deleted.)
-- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14T145842Z-phase1.md`: APPROVE WITH CONDITIONS, reviewed HEAD `a2ce7c6`; the one condition, Node metadata, is corrected in the follow-up commit below and that correction is not yet independently re-reviewed)
 
 **Deviations from the original task text (installed ESLint 10.15.0 supports flat config only):** `eslint.config.mjs` replaces `.eslintrc.json`; its `ignores` list replaces `.eslintignore`. `.kiro/specs/` needs no exclusion because ESLint only lints JS/TS files. Added dev dependencies: `@eslint/js`, `typescript-eslint`, `globals`.
 
@@ -133,9 +133,9 @@ Each task tracks three stages:
 **Status:**
 - [x] Implemented (commit: `cd16dfb` for the workspace, Turborepo, and lockfile; `d7b323e` adjusted `turbo.json` outputs and the core package joined the workspace)
 - [x] Verified (2026-11-14: `pnpm install` → exit 0; with zero packages `pnpm build` → "Running build in 0 packages", exit 0, `.turbo/` created; after Task 7 `pnpm build` → 1 package, `tsc -p tsconfig.build.json`, exit 0, `packages/core/dist/` contains 8 files. A fresh copy of the tracked files plus the new files, installed with `pnpm install --frozen-lockfile`, printed no "ignored build scripts" warning and passed all 10 tests, so the `onlyBuiltDependencies` allowlist (`esbuild`, `workerd`) works without manual `pnpm rebuild`.)
-- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14T145842Z-phase1.md`: APPROVE WITH CONDITIONS, reviewed HEAD `a2ce7c6`; the one condition, Node metadata, is corrected in the follow-up commit below and that correction is not yet independently re-reviewed)
 
-**Deviations:** The machine default is Node 20.20.2 but the toolchain requires Node >=22 (Vitest 5 and Wrangler 4.162 declare `>=22.12.0`; the Workers plugin depends on Wrangler 4.162 and Miniflare 5, which declare `>=22`). All commands ran with the already-installed nvm Node 22.23.3. Added `.nvmrc` (`22`) and root `engines.node` `>=22.12.0`. `pnpm lint` runs `eslint .` at the root so it also covers root config files; `turbo.json` still defines a `lint` task and core has a `lint` script. `typecheck` runs the root `tsc --noEmit` and then `turbo run typecheck`.
+**Deviations:** The machine default is Node 20.20.2 but the toolchain requires Node >=22 (Vitest 5 and Wrangler 4.162 declare `>=22.12.0`; the Workers plugin depends on Wrangler 4.162 and Miniflare 5, which declare `>=22`). All commands ran with the already-installed nvm Node 22.23.3. Added `.nvmrc` and root `engines.node`. Original value `>=22.12.0` was corrected on 2026-11-14 after Firstmate's review: ESLint 10.15.0 declares `^20.19.0 || ^22.13.0 || >=24`, so `>=22.12.0` wrongly admitted 22.12.x and 23.x. The range is now `^22.13.0 || >=24.0.0`, the intersection of `engines.node` across all 139 installed packages that declare one, and `.nvmrc` pins the tested `22.23.3`. `pnpm lint` runs `eslint .` at the root so it also covers root config files; `turbo.json` still defines a `lint` task and core has a `lint` script. `typecheck` runs the root `tsc --noEmit` and then `turbo run typecheck`.
 
 **Files created:**
 - `pnpm-workspace.yaml`
@@ -171,7 +171,7 @@ Each task tracks three stages:
 **Status:**
 - [x] Implemented (commit: `d7b323e`, `feat: add TypeScript, Workers-runtime Vitest, and @recallfeed/core package`)
 - [x] Verified (2026-11-14: `pnpm typecheck` → exit 0 (root `tsc --noEmit -p tsconfig.json`, then `turbo run typecheck` running `tsc -p tsconfig.json && tsc -p tsconfig.test.json` in core). It first failed once with `TS2339: Property 'crypto' does not exist on type 'typeof globalThis'` in `smoke.test.ts`; fixed in the test and rerun clean. Negative control: appending `crypto.randomUUID()` to `packages/core/src/errors.ts` made `tsc -p tsconfig.json` fail with `TS2304: Cannot find name 'crypto'` (exit 2), proving `"types": []` keeps runtime globals out of core source; the edit was reverted and the file diffed identical to its backup.)
-- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14T145842Z-phase1.md`: APPROVE WITH CONDITIONS, reviewed HEAD `a2ce7c6`; the one condition, Node metadata, is corrected in the follow-up commit below and that correction is not yet independently re-reviewed)
 
 **Deviations:** TypeScript is `~5.9.3`, not the registry's `latest` 7.0.2, because installed `typescript-eslint@8.72.2` declares `typescript >=4.8.4 <6.1.0`. `tsconfig.base.json` adds `verbatimModuleSyntax`, `isolatedModules`, `noImplicitOverride`, and `noFallthroughCasesInSwitch`. Core uses three tsconfigs (`tsconfig.json` source with no ambient types, `tsconfig.test.json` with Workers types, `tsconfig.build.json` for emit).
 
@@ -211,7 +211,7 @@ Each task tracks three stages:
 **Status:**
 - [x] Implemented (commit: `d7b323e`; dependencies installed in `cd16dfb`)
 - [x] Verified (2026-11-14: `pnpm test` → exit 0, `vitest run` v4.1.12 in the Workers runtime, 2 files / 10 tests passed. Smoke test checks `navigator.userAgent === "Cloudflare-Workers"`, global `crypto.randomUUID()` output matches the RFC 4122 v4 pattern and is unique, and `WebSocketPair`/`HTMLRewriter` exist. Negative control: the same smoke test run under plain Node (no Workers plugin) failed 2 of 3 (`expected 'Node.js/22' to be 'Cloudflare-Workers'`, `WebSocketPair` undefined); control config deleted. `pnpm test:coverage` → istanbul, 100% statements/branches/functions/lines on `errors.ts`, above the 80% threshold.)
-- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14T145842Z-phase1.md`: APPROVE WITH CONDITIONS, reviewed HEAD `a2ce7c6`; the one condition, Node metadata, is corrected in the follow-up commit below and that correction is not yet independently re-reviewed)
 
 **Deviations:** `@cloudflare/vitest-pool-workers@0.23.0` is deprecated and renamed `@cloudflare/vitest-plugin`, so the plugin `1.8.2` is installed (it pins Wrangler `4.162.0` and Miniflare `5.20261113.0-beta`, running workerd `1.20261113.1`). The todo's "Wrangler 4.148.0" is not installed at the root; Task 17 should decide the Wrangler pin. Vitest 4 replaced `vitest.workspace.ts` with `test.projects`, so the root `vitest.config.ts` uses `projects: ["packages/*"]` and each package owns a `vitest.config.ts` calling `cloudflareTest()`. The first smoke test asserted that `process.versions.node` is absent; that was wrong because workerd supplies its own `process` global, so it was replaced with the `WebSocketPair`/`HTMLRewriter` check. Vitest is `^4.1.12` (not 5.x) because the plugin's peer range accepts both and `@vitest/coverage-istanbul` is matched at 4.1.12.
 
@@ -297,7 +297,7 @@ Each task tracks three stages:
 **Status:**
 - [x] Implemented (commit: `d7b323e`)
 - [x] Verified (2026-11-14: `pnpm test` → 10 tests passed in the Workers runtime (3 smoke, 7 error-hierarchy); `pnpm --filter @recallfeed/core build` via `pnpm build` → exit 0; `pnpm typecheck` → exit 0 including core; `pnpm lint` → exit 0; `packages/core/package.json` has `"dependencies": {}` and no peer or dev dependencies; emitted `dist/index.js` contains only relative re-exports; Skeleton Crew grep over `packages/` found no `apps/` import, no sibling `@recallfeed/*` import, and no `ReflectionFeed`/`DevRecall` string.)
-- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14T145842Z-phase1.md`: APPROVE WITH CONDITIONS, reviewed HEAD `a2ce7c6`; the one condition, Node metadata, is corrected in the follow-up commit below and that correction is not yet independently re-reviewed)
 
 **Deviations (the todo's list is narrower than approved Spec 01, which governs):** The package also exports `IAIProvider` (Spec 01 defines four interfaces, the todo listed three), the supporting types (`NormalizedNote`, `ConnectorCredentials`, `ConnectorValidationResult`, `AIOptions`, `GetFeedOptions`, `FeedPage`, `ImportResult`, `ResurfacingStrategyName`, `NoteMetadata`, `SourceType`, `CardType`), and `RecallFeedError` with its five subclasses, because Spec 01 requires them. Files follow Spec 01's layout (`types.ts`, `interfaces.ts`, `errors.ts`, `index.ts`, plus a package `README.md`) instead of the todo's `types/` and `interfaces/` directories. Added `src/__tests__/errors.test.ts` (7 tests) so the only runtime code, the error classes, is exercised and the 80% coverage threshold is meaningful. Added `tsconfig.test.json` and `tsconfig.build.json`.
 
@@ -315,7 +315,7 @@ Each task tracks three stages:
 
 **PHASE 1 CHECKPOINT:** Bootstrap complete with working toolchain verified. Stop for human review before proceeding to Phase 2.
 
-**Checkpoint criteria** (self-verified 2026-11-14 on Node 22.23.3; none independently reviewed yet):
+**Checkpoint criteria** (self-verified 2026-11-14 on Node 22.23.3; independently reviewed by Firstmate at `a2ce7c6`, APPROVE WITH CONDITIONS):
 - [x] Git initialized with approved specs committed, no actual secrets staged (manual inspection performed)
 - [x] ESLint enforces 1000-line max on all handwritten JS/TS (including tests, configs, scripts, future apps)
 - [x] pnpm + Turborepo configured, `pnpm build` succeeds
@@ -365,7 +365,19 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 
 **Deliberately not changed (later-phase corrections from the review, to settle before those phases are authorized):** Task 10 database transport; Task 27 cursor and its reference to a removed importance score; the basic-feed versus full Spec 05 contract distinction; the Phase 3 execution order and the "checkpoint after task 24" phrasing. Task 17 also needs a Wrangler version decision, since `4.148.0` is not what the installed plugin pins.
 
-**Review state:** Implemented and Verified for Tasks 1-5 and 7; Task 6 re-verified with Git tracking. No task is marked Reviewed: running my own tests is verification, not independent review.
+**Review state:** Tasks 1-7 were independently reviewed by Firstmate (`firstmate/data/recallfeed/reviews/2026-11-14T145842Z-phase1.md`, APPROVE WITH CONDITIONS, reviewed HEAD `a2ce7c6`). The review verified lint, build, typecheck, test, and coverage independently, matched all 25 file hashes, and matched all 27 Spec 01 declarations. It did not independently reinstall from the registry, so the clean-install result above remains this session's evidence. Later phases are not reviewed or authorized.
+
+### Phase 1 Follow-up (after Firstmate review)
+
+**Condition closed, pending re-review:** `package.json` `engines.node` changed from `>=22.12.0` to `^22.13.0 || >=24.0.0`; `.nvmrc` changed from `22` to `22.23.3`. Evidence (run 2026-11-14 before the commit):
+
+- The range is the intersection of `engines.node` across all 139 installed packages that declare one (computed with the installed `semver`). Accepted: 22.13.0, 22.23.3, 24.0.0, 24.22.2, 26.0.0. Rejected: 20.20.2, 22.12.0, 23.0.0, 23.11.0. `.nvmrc` is inside the range.
+- Node 22.23.3, working tree: `pnpm lint`, `build`, `typecheck`, `test`, `test:coverage` all exit 0; 10 tests passed.
+- Node 24.22.2, fresh copy of the tracked files, `pnpm install --frozen-lockfile` exit 0, then the same five commands all exit 0; 10 tests passed. This exercises the `>=24` half of the range with a real install, not only the semver arithmetic.
+- Node 20.20.2, `pnpm install --frozen-lockfile --engine-strict` fails with `ERR_PNPM_UNSUPPORTED_ENGINE` (`Expected version: ^22.13.0 || >=24.0.0`, `Got: v20.20.2`), so the declared range is enforceable.
+- Not run: Node 22.13.0 through 22.22.x (only 22.22.2, 22.23.2, 22.23.3 are installed locally) and Node 25/26 (not installed); their acceptance rests on the manifests only.
+
+**Review conditions carried forward, not changed in Phase 1:** the `IFeedEngine.importMarkdown` JSDoc claims the 100 KB limit keeps the import within the CPU budget. Firstmate treats that as an unproved claim; reword it when the import is implemented, backed by Workers benchmarks, without weakening acceptance criteria. Packages are private and source-exported; nothing here certifies a publishable package.
 
 ---
 
