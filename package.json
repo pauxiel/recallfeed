@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "test": "turbo run test",
+    "test": "turbo run test --concurrency=1",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit -p tsconfig.json && turbo run typecheck",
     "lint": "eslint ."

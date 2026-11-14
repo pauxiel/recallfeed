@@ -25,6 +25,9 @@ export type { CandidateOptions, NewFeedItem } from "./queries/feed-items";
 
 export { isUuid } from "./queries/rows";
 
+// Test aid: counts driver HTTP requests (Worker subrequests) made by an operation.
+export { countHttpRequests } from "./count-requests";
+
 // Development and test only: routes the exact local proxy host to the local proxy. Production
 // Worker code never calls it, and it changes nothing for any other host.
 export { LOCAL_PROXY_HOST, configureLocalNeonHttp } from "./local-proxy";

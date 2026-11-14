@@ -2,7 +2,8 @@
  * Node-only helpers for integration tests in other packages.
  *
  * Import from `@recallfeed/database/testing` in a Vitest `globalSetup` file. This module uses
- * `node:fs` and the `ws` package, so it must never be imported by Worker code.
+ * `node:fs` and the `ws` package, so it must never be imported by Worker code. The Workers-safe
+ * test helper `countHttpRequests` lives in `@recallfeed/database` itself.
  */
 import { migrateDatabase } from "./migrate-node";
 import type { MigrationReport } from "./migrate";

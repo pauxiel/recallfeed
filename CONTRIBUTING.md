@@ -36,7 +36,7 @@ pnpm --filter @recallfeed/database db:test:down        # discards the disposable
 
 Details, the reset safeguards, and limits are in `packages/database/README.md`.
 
-**Run one database integration at a time.** The Compose project name (`recallfeed-test`) and the
+**Run one database integration at a time.** `pnpm test` runs the packages one after another (`--concurrency=1`), and each package's test files run one at a time, because every package's integration tests share one database. The Compose project name (`recallfeed-test`) and the
 proxy port (`127.0.0.1:4444`) are fixed, so every checkout of this repository addresses the same
 database service. A separate Git workspace does not give you a separate database. Do not reset,
 recreate, or stop a database that another session may be using. Parallel databases would need a
