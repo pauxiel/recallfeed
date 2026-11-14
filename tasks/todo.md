@@ -11,8 +11,8 @@
 Each task tracks three stages:
 
 1. **Implemented:** Code written, committed (record commit SHA)
-2. **Verified:** Tests pass, build succeeds (record command output)
-3. **Reviewed:** Independent verification confirms acceptance criteria met (automated test suite or human check)
+2. **Verified (self-tested):** the implementing worker ran the checks: tests, build, typecheck, lint. Record the exact commands, versions, results, and skipped counts. Running your own tests is verification, not independent review.
+3. **Reviewed:** an independent review by someone other than the implementer (for example Firstmate or the user). Record the reviewer, the date, the verdict, and **the revision (commit SHA) that was reviewed**. A passing test suite is Verified evidence, not Reviewed evidence, however thorough it is.
 
 **Delivery states (added 2026-11-14, see `CONTRIBUTING.md`):** two further states are kept distinct from the three above. **Pushed** = the commit is on the remote (record remote, branch, and the SHA read back from the server). **Merged** = the branch tip is contained in `main` (record the merge or fast-forward commit). Tasks 1-10 predate the extra fields; their pushed state is recorded in the execution records, and later tasks should add `- [ ] Pushed` and `- [ ] Merged` lines.
 
@@ -20,11 +20,13 @@ Each task tracks three stages:
 ```markdown
 **Status:**
 - [ ] Implemented (commit: <SHA>)
-- [ ] Verified (command: <output summary>)
-- [ ] Reviewed (evidence: <test output or reviewer confirmation>)
+- [ ] Verified (self-tested: <commands, versions, results, skipped counts>)
+- [ ] Reviewed (independent: <reviewer, date, verdict, revision reviewed>)
+- [ ] Pushed (<remote, branch, SHA read back from the server>)
+- [ ] Merged (<merge or fast-forward commit>)
 ```
 
-**Checkpoint boundaries:** Human approval required at phase boundaries (after Task 7, Task 21, **Task 23, which ends Phase 3 because Phase 3 runs 24 → 22 → 23**, Task 28, and Task 30). Within a phase, "Reviewed" means independent verification (test suite run, not manual approval for every task).
+**Checkpoint boundaries:** Human approval required at phase boundaries (after Task 7, Task 21, **Task 23, which ends Phase 3 because Phase 3 runs 24 → 22 → 23**, Task 28, and Task 30). Within a phase, no individual task needs a manual human approval: the implementing worker records Implemented and Verified (self-tested) as each task is done. "Reviewed" is recorded only when an independent review has examined a stated revision. That review normally happens at the phase or milestone checkpoint (or at an earlier boundary the user sets), and one review may cover many tasks; record the same review evidence on each task it covers. A task that is not yet reviewed does not block the next task in the same phase.
 
 **Do not advance to next phase until human reviews phase checkpoint.**
 
@@ -363,7 +365,7 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 
 **Corrections to earlier evidence:** The cycle 3 completion report (`PLANNING-CYCLE3-COMPLETE.md`) gave `grep -c "^## Task" tasks/todo.md` with expected output 30. Run for real it prints 2, because task headings are level three. The correct command, `grep -c '^### Task' tasks/todo.md`, prints 30 (run 2026-11-14). That report is also dated 2026-11-07 although it cites 2026-11-14 reviews. It was not edited; this record supersedes it.
 
-**Record reconciliations made in this pass (review item 5, narrow):** `tasks/plan.md` no longer says "Implement multiple tasks in one commit"; the two checkpoint lists in this file now read "7, 21, 24, 28, 30". The remaining references to Task 31 in this file are historical notes about its consolidation into Task 18.
+**Record reconciliations made in this pass (review item 5, narrow):** `tasks/plan.md` no longer says "Implement multiple tasks in one commit"; the two checkpoint lists in this file now read "7, 21, 24, 28, 30". [Superseded: Phase 3 runs 24 → 22 → 23, so its boundary is Task 23; see the Task State Protocol and the later corrections.] The remaining references to Task 31 in this file are historical notes about its consolidation into Task 18.
 
 **Deliberately not changed (later-phase corrections from the review, to settle before those phases are authorized):** Task 10 database transport; Task 27 cursor and its reference to a removed importance score; the basic-feed versus full Spec 05 contract distinction; the Phase 3 execution order and the "checkpoint after task 24" phrasing. Task 17 also needs a Wrangler version decision, since `4.148.0` is not what the installed plugin pins.
 
@@ -1466,7 +1468,7 @@ Before advancing to Gate 3, verify all criteria from `tasks/plan.md`:
 - [ ] All functions have JSDoc comments
 - [ ] Git repository initialized with clean history, no secrets staged
 - [ ] **Each task tracks:** Implemented (commit SHA) / Verified (command output) / Reviewed (evidence)
-- [ ] **Phase checkpoints completed:** Human review at boundaries (tasks 7, 21, 24, 28, 30)
+- [ ] **Phase checkpoints completed:** Human review at boundaries (tasks 7, 21, 23, 28, 30)
 
 ---
 
@@ -1514,7 +1516,7 @@ This todo.md addresses all findings from planning review cycle 2:
 2. ✅ **Early path reorganized:** feed-engine (Task 16), Worker entry (Task 17), auth guards (Task 18) BEFORE POST /import/markdown (Task 19)
 3. ✅ **API contracts restored:** Spec 05 exact response fields, all review actions on /review endpoint (no separate /publish), source-scoped deduplication clarified
 4. ✅ **PostgreSQL transport declared:** Task 10 specifies local PostgreSQL or Neon HTTP test DB
-5. ✅ **Checkpoint review clarified:** Human approval at phase boundaries (tasks 7, 21, 24, 28, 30), within-phase "Reviewed" is independent verification (test suite)
+5. ✅ **Checkpoint review clarified:** Human approval at phase boundaries (tasks 7, 21, 23, 28, 30), no per-task manual approval within a phase, and "Reviewed" requires independent review evidence naming the revision reviewed (see Task State Protocol). [Wording corrected 2026-11-14: this line originally said an automated test suite counted as review, and listed Task 24 as the Phase 3 boundary.]
 6. ✅ **Skill setup complete:** Native Kiro structure verified, discovery evidence provided (Task 6)
 
 **All tasks reconciled against approved Specs 01-09, no invented requirements.**
