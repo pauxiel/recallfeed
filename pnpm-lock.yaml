@@ -45,6 +45,15 @@ importers:
         specifier: ^4.1.12
         version: 4.1.12(@types/node@22.20.5)(@vitest/coverage-istanbul@4.1.12)(vite@8.3.8(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15))
 
+  packages/connectors:
+    dependencies:
+      '@recallfeed/core':
+        specifier: workspace:*
+        version: link:../core
+      marked:
+        specifier: ^18.2.0
+        version: 18.2.0
+
   packages/core: {}
 
   packages/database:
@@ -1247,6 +1256,11 @@ packages:
   make-dir@4.0.0:
     resolution: {integrity: sha512-hXdUTZYIVOt1Ex//jAQi+wTZZpUpwBj/0QsOzqegb3rGMMeJiSEu5xLHnYfBrRV4RH2+OCSOO95Is/7x1WJ4bw==}
     engines: {node: '>=10'}
+
+  marked@18.2.0:
+    resolution: {integrity: sha512-KaeL+tAbtvI930q7HE2PN5lYXYdT8EiSmxHlN6F3rsfb57wd5mp5W5TLazpdj4inTQBJdgjYwbs40W/0VUGU+Q==}
+    engines: {node: '>= 20'}
+    hasBin: true
 
   miniflare@5.20261113.0-beta:
     resolution: {integrity: sha512-Kg+SarKNSn0lkhR88OHI29rIXJvmKs/c9hmxFXvEqK1J9aHu+AFl6CdaBq/k3iOTyMbm2p4h1HGLs7vXaLYMWA==}
@@ -2679,6 +2693,8 @@ snapshots:
   make-dir@4.0.0:
     dependencies:
       semver: 7.8.6
+
+  marked@18.2.0: {}
 
   miniflare@5.20261113.0-beta(@types/node@22.20.5):
     dependencies:

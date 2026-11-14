@@ -1,0 +1,10 @@
+{
+  // Connector source runs in a Worker: it uses the Web platform (TextEncoder, crypto.subtle),
+  // never Node built-ins. Tests are checked by tsconfig.test.json.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/__tests__/**", "src/**/*.test.ts"]
+}
