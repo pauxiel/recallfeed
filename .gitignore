@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+coverage/
+.next/
+.vite/
+.wrangler/
+.vercel/
+out/
+
+# Environment and secrets — NEVER commit these
+.env
+.env.local
+.env.*.local
+.env.*
+!.env.example
+.dev.vars
+*.dev.vars
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Turborepo
+.turbo/
+
+# NOTE: .kiro/ is intentionally NOT listed here.
+# The .kiro directory must always be committed to the repository.
+# It contains specifications, steering documents, and hooks that are
+# part of the RecallFeed skeleton and the Kiroween hackathon submission.

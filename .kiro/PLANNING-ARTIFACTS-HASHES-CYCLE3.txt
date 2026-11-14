@@ -1,0 +1,4 @@
+5a616a8fa5802083c6cc3b65a9535e0e75d2011389330ec07ddea10cd16032b0  tasks/plan.md
+0ee483ef0f0fd336de63db301689ddce8c3f3239ecfb8907b0d073259dbe5d2a  tasks/todo.md
+b338c364c543daab3d19d83f5f29f39a3c4e828e55d26b2fe439a53adc2b573c  .kiro/agents/recallfeed.json
+d1127277ce155505df6bff4d9f5c1afd6645ce4b37f86dbdf56efc6357e02e4c  .kiro/skills/DISCOVERY-EVIDENCE.md

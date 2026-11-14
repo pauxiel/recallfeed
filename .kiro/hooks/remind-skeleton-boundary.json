@@ -1,0 +1,23 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Skeleton Crew boundary check",
+      "trigger": "PostFileSave",
+      "matcher": "packages/.*\\.ts$",
+      "action": {
+        "type": "agent",
+        "prompt": "A file in packages/ was just saved. Before continuing, verify the Skeleton Crew boundary rules from .kiro/steering/skeleton-crew-rules.md:\n1. Does any packages/* file now import from apps/*? If yes, flag it immediately.\n2. Does packages/core import from any other package in packages/*? If yes, flag it immediately.\n3. Has any application-specific string (e.g. 'ReflectionFeed', 'DevRecall') been hardcoded into packages/api logic rather than read from an environment variable? If yes, flag it immediately.\nIf all checks pass, state 'Skeleton boundary: OK' and continue."
+      }
+    },
+    {
+      "name": "Prevent .kiro from being gitignored",
+      "trigger": "PostFileSave",
+      "matcher": "\\.gitignore$",
+      "action": {
+        "type": "agent",
+        "prompt": "A .gitignore file was just saved. Check whether it contains any entry that would exclude the .kiro directory or any of its subdirectories (e.g. '.kiro', '.kiro/', '.kiro/**'). If any such entry exists, alert immediately: 'WARNING: .kiro is being excluded from git. This violates the project conventions and hackathon requirements. Remove the exclusion.' The .kiro directory must always be committed to the repository."
+      }
+    }
+  ]
+}
