@@ -408,9 +408,11 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 - [ ] No `dependencies` include pooling or ORM libraries
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `pnpm --filter @recallfeed/database build`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `f07e34d`)
+- [x] Verified (2026-11-14, Node 22.23.3: `pnpm build` → exit 0 for both packages; `pnpm typecheck` → exit 0 (three configs: Worker code, Node scripts, tests); `pnpm lint` → exit 0. `createDb` is exercised in the Workers runtime by `driver.test.ts` and `schema.test.ts`. `@recallfeed/database` dependencies are `@neondatabase/serverless ^1.2.1` and `@recallfeed/core workspace:*` only; no pooling or ORM library.)
+- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+
+**Deviations:** The factory is named `createDb` (with `DbClient`), as approved Spec 02 and Spec 07 name it; this task's text said `createDatabaseClient`. A `DatabaseEnv` type holds the `DATABASE_URL` binding. `tsx`, `@types/node`, `ws`, and `@types/ws` are dev tooling for the Node-only migration CLI; `tsx` and `@types/node` sit at the workspace root and `ws`/`@types/ws` in this package.
 
 **Files created:**
 - `packages/database/package.json`
@@ -445,9 +447,11 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 - [ ] Tracking table exists in migration: `grep "_schema_migrations" 001_initial.sql`
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: SQL syntax check)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `f07e34d`)
+- [x] Verified against a real PostgreSQL 17.12, not a syntax check: the `pnpm db:migrate` CLI was run on a reset database. First run → `applied 001_initial.sql`, `done: 1 applied, 0 skipped`; second run → `skipped 001_initial.sql`, `done: 0 applied, 1 skipped`. Ground truth read with `psql` inside the container: `_schema_migrations` holds exactly `001_initial.sql`; tables are `_schema_migrations, feed_items, notes, review_events, sources`; 11 `*_idx` indexes exist; `notes_source_content_hash_idx` is `CREATE UNIQUE INDEX … (source_id, content_hash)`. A deliberately failing second migration (`CREATE TABLE should_not_exist …; SELECT * FROM table_that_does_not_exist`) was rejected, left no `should_not_exist` table and no tracking row. The CLI without `DATABASE_URL` exits 1 and changes nothing. The 12 unit tests in `migrate.test.ts` cover numeric ordering (`010` after `002`), malformed names, duplicate prefixes, skipping, and rollback.
+- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
+
+**Deviations and notes:** Spec 02 is internally inconsistent about ordering ("lexicographic" in the acceptance list, "numeric by prefix" in the algorithm); the runner sorts numerically, as the algorithm and the example in the spec require. `001_initial.sql` also contains `CREATE TABLE IF NOT EXISTS _schema_migrations` because the spec says both that the runner creates it and that `001` creates all five tables; the statement is idempotent. The runner uses a WebSocket `Client` in Node, because the HTTP `neon()` function cannot run multi-statement files or transactions. Files are `src/migrate.ts` (logic), `src/migrate-node.ts` and `src/migrate-cli.ts` (Node entry).
 
 **Files created:**
 - `packages/database/src/migrations/001_initial.sql`
@@ -483,11 +487,11 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 - [ ] Named constraint test: Violate `notes_source_content_hash_idx`, verify error includes constraint name
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `TEST_DATABASE_URL=... pnpm test` with PostgreSQL verification)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `f07e34d`)
+- [x] Verified (2026-11-14, see "Phase 2 database spike evidence" below)
+- [ ] Reviewed (awaiting independent Firstmate review; self-verification only)
 
-**Transport chosen:** _______ (Option A or B — authorization stop if cloud database provisioning needed)
+**Transport chosen:** Option A, refined. `@neondatabase/serverless` over HTTP to a local Neon-compatible proxy (`ghcr.io/timowilhelm/local-neon-http-proxy`, pinned by digest) in front of PostgreSQL 17.12, both run by Docker Compose under Colima. No cloud resources. An ordinary `postgresql://localhost:5432` listener is not enough; the proxy is what makes the HTTP client work.
 
 **Files created:**
 - `.env.test.example`
@@ -495,6 +499,46 @@ The commit that records this evidence is the next one on `main`; its SHA is in t
 - `packages/database/src/__tests__/smoke.test.ts` (PostgreSQL feature verification)
 
 **Estimated scope:** Small
+
+---
+
+### Phase 2 database spike evidence (Tasks 8-10 only; stop point for Firstmate review)
+
+Run 2026-11-14 under the user's authorization to install Colima/Docker/Compose and prove the Neon HTTP driver from the Workers test runtime. Work stopped after Task 10; Tasks 11-21 are not started.
+
+**Host and tool versions:** macOS 26.5.2 arm64, 8 CPUs, 16 GB. Installed with Homebrew, no sudo: `colima 0.10.3`, `lima 2.3.0`, `docker 29.9.3` (client; server 29.5.2 linux/arm64), `docker-compose 5.7.1`. Colima VM: 2 CPUs, 3 GB, 20 GB disk, docker runtime, default profile. Starting Colima created `~/.colima`, `~/.lima`, and a `colima` Docker context in `~/.docker`. Not done: no `~/.docker/config.json` plugin edit (the standalone `docker-compose` binary is used), no login service, no hosts-file edit (DNS for `db.localtest.me` already resolved to 127.0.0.1), no sudo.
+
+**Images, pinned by digest in `packages/database/docker/compose.test.yaml`:**
+- `postgres:17@sha256:846a7ddaa67a4b354ae1d21087b683901aa6113a4ed626d3787cfbf6c85e3e07` → PostgreSQL 17.12 (Debian), arm64.
+- `ghcr.io/timowilhelm/local-neon-http-proxy@sha256:cd2ae14edf2feafbc3330492de5c80506f77274c3bd013154cdef697bdeb768a`, built 2026-03-27 from the community project (CC0-1.0), arm64.
+
+**Isolation:** compose project `recallfeed-test`; PostgreSQL data on tmpfs (gone on teardown); PostgreSQL publishes no port; only the proxy publishes `127.0.0.1:4444` (checked with `lsof`: one listener, bound to 127.0.0.1, nothing on 5432). Development data must use a different compose project, volume, and ports; none was created. Test harness guard `assertSafeTestDatabaseUrl` allows only `localhost`, `127.0.0.1`, `::1`, `db.localtest.me` and a database name containing `test` as a whole word, because the setup drops and recreates the `public` schema.
+
+**Driver proof (the main question):** `@neondatabase/serverless@1.2.1`, called as `createDb(url)` inside workerd (`navigator.userAgent === "Cloudflare-Workers"` asserted), returned `PostgreSQL 17.12 (Debian 17.12-1.pgdg13+1) on aarch64-unknown-linux-gnu` and `current_database() = recallfeed_test`, over HTTP via the proxy. The Neon driver's `fetchEndpoint`, `wsProxy`, and `useSecureWebSocket` settings are changed only when the URL host is exactly `db.localtest.me` (`local-proxy.ts`; 3 tests, including that real Neon and lookalike hosts are left untouched).
+
+**Test results (Node 22.23.3):**
+
+| Command | Result |
+|---|---|
+| `pnpm lint`, `pnpm build`, `pnpm typecheck` | all exit 0 |
+| `pnpm test` with no database | exit 0; core 10 passed; database 29 passed, 16 skipped (the integration suites skip without `TEST_DATABASE_URL`) |
+| `pnpm --filter @recallfeed/database test:integration` | exit 0; 5 files, 45 tests passed, 0 skipped |
+| `pnpm test:coverage` with the database | exit 0; 7 files, 55 tests passed; 100% statements, branches, functions, lines on `errors.ts`, `client.ts`, `local-proxy.ts`, `migrate.ts`, `test-safety.ts` |
+
+**Named constraints (HTTP driver, in workerd; each failure's `code` and `constraint` fields were asserted, not only message text):** duplicate `(source_id, content_hash)` → `23505`, constraint `notes_source_content_hash_idx`; the same hash in another source is accepted; second card of one type on a note → `23505`, `feed_items_note_card_type_idx`; CHECK violations → `23514` with the PostgreSQL-generated names `sources_type_check`, `feed_items_card_type_check`, `review_events_action_check` (Spec 02 leaves these unnamed); orphan note → `23503`, `notes_source_id_fkey`; deleting a source cascades through notes, feed items, and review events. All 11 Spec 02 indexes exist with the expected columns, `UNIQUE`, partial predicates (`WHERE (is_published = true)`, `WHERE (snoozed_until IS NOT NULL)`), `NULLS FIRST`, and `DESC`. UUID, JSONB, and TIMESTAMPTZ column types were read from `information_schema`; a JSONB object and a `-05:00` timestamp round-tripped correctly; column defaults (`is_published = false`, `review_count = 0`) held; `sql.query($1, $2)` parameters worked.
+
+**Negative controls:** changing `notes_source_content_hash_idx` to non-unique and renaming `feed_items_note_card_type_idx` made 3 integration tests fail (index shape, and both duplicate-rejection tests); migration restored byte for byte. The migration CLI without `DATABASE_URL` refused (exit 1).
+
+**Problems found and fixed during the work (all mine):**
+1. The first database build failed with `TS6059` (rootDir) because packages export TypeScript source. `tsc` still emitted files, writing 8 stray `.js`/`.d.ts` files into `packages/core/src/`. Vite resolves `./errors` to `errors.js` before `errors.ts`, so tests ran uninstrumented output and `errors.ts` coverage fell from 100% to 0%. I first guessed the cause wrongly (duplicate Vitest copies, then deduplicated; coverage did not change) and found the real cause by building the pushed commit in a clean worktree (100%), then moving `packages/database` aside (still 0%), then reading `git status`. Fixes: deleted the 8 untracked files; `noEmitOnError: true` in both build configs; dropped `rootDir` from the database build config; `.gitignore` now ignores `packages/*/src/**/*.js`.
+2. `.env.test.example` was ignored by my own `.env.*` rule; added `!.env.*.example`.
+3. A first migration-CLI "first run" check was invalid: a zsh word-splitting mistake meant the database was never reset, so the CLI correctly skipped. Redone with shell functions after a verified reset (`tables after reset: 0`).
+4. A test expected `WHERE is_published`; PostgreSQL stores the predicate as `WHERE (is_published = true)`. Fixed the assertion, not the schema.
+5. My `tsx`/`@types/node` install first went into the database package and produced extra peer-dependency resolutions; they now live at the workspace root, followed by a clean reinstall.
+
+**Not verified / limits:** the proxy is a community image, so parity with hosted Neon is high but unproven; no real Neon branch was used. WebSocket transactions were verified only from Node (`ws`), not from workerd. `*-node.ts`, `*-cli.ts`, and `__tests__/setup.ts` run in Node and cannot be instrumented by the Workers-process coverage run, so they are excluded from coverage and verified by running them. First use of `db.localtest.me` needs internet DNS. Hosted-Neon compatibility of the migration SQL was not tested.
+
+**Stop point:** Tasks 8-10 are implemented and self-verified. Tasks 11-21 are not started. Awaiting independent Firstmate review.
 
 ---
 
