@@ -1,0 +1,11 @@
+{
+  // Emits JavaScript and declarations to dist/. Inside the monorepo, consumers
+  // import src/index.ts directly, so dist/ exists to prove the package compiles.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": "src"
+  }
+}

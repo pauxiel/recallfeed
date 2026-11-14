@@ -1,0 +1,10 @@
+{
+  // Source-only check. `types: []` keeps ambient runtime globals (fetch, crypto,
+  // Node built-ins) out of scope, which enforces Spec 01's "pure TypeScript" rule.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": []
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/__tests__/**", "src/**/*.test.ts"]
+}

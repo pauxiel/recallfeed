@@ -1,0 +1,15 @@
+{
+  // Workspace-wide typecheck (`pnpm typecheck`). It covers package source, tests,
+  // and root tool configuration. Each package keeps its own stricter tsconfig.json
+  // for its source files (for example, core declares no ambient runtime types).
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/*.config.ts",
+    "vitest.config.ts"
+  ],
+  "exclude": ["**/node_modules", "**/dist", "**/coverage"]
+}
