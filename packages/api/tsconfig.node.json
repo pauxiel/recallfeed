@@ -1,0 +1,8 @@
+{
+  // Scripts that run in Node through vitest's own process, never in a Worker.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["src/__tests__/setup.ts", "vitest.config.ts"]
+}
