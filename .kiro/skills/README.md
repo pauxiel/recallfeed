@@ -28,33 +28,30 @@ Creates specifications before coding.
 **License:** MIT  
 **Author:** Addy Osmani
 
-## License
+## License and provenance
 
-These skills are redistributed under the MIT License as permitted by the original repository.
+These three skills are third-party material, copied from Addy Osmani's
+[agent-skills](https://github.com/addyosmani/agent-skills) repository, which is
+licensed under the MIT License, `Copyright (c) 2025 Addy Osmani`.
 
-```
-MIT License
+The complete original license and copyright notice is kept unmodified, byte for
+byte, in [`LICENSE-agent-skills`](./LICENSE-agent-skills) (git blob SHA
+`d67778ada6b9cda6227e9130da182c13e73c8b2e`, upstream `LICENSE` on `main`, checked
+2026-11-14). It must stay with any copy of these skills.
 
-Copyright (c) Addy Osmani
+Each local `SKILL.md` was checked byte for byte against the upstream history on
+2026-11-14 (current upstream `main` is commit
+`39b723ceebf81474d0557c1fecd01eddab585563`). All three are unmodified copies:
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+| Skill | Identical to upstream commit | Relation to current upstream `main` |
+|---|---|---|
+| `incremental-implementation` | `cda4542ade0f3c532494b9a48837eb01d39925f1` (2026-09-07) | Same as `main`. |
+| `planning-and-task-breakdown` | `8300e1bbe77a9f1610a0e9da624593c3d5dea020` (2026-08-28) | Older. Upstream later added a `Source spec:` line (2026-10-31). |
+| `spec-driven-development` | `0004999461827d22fd3513d647fa7e7f72d6bf9c` (2026-10-15) | Older. Upstream later added "Spec Evolution" material (2026-10-31, 2026-11-07). |
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+This repository's own license (root `LICENSE`, MIT, `Copyright (c) 2026 pauxiel`)
+covers RecallFeed's original work and does not replace Addy Osmani's copyright in
+these skills.
 
 ## Usage
 

@@ -56,20 +56,13 @@ These are edits to `tasks/todo.md` and `tasks/plan.md`, not code. I have not mad
 4. Phase 3 order: 24, then 22, then 23, with review after the whole phase.
 5. Reword the `IFeedEngine.importMarkdown` JSDoc: the 100 KB limit does not by itself guarantee the CPU budget; benchmark first.
 
-## 5. Root license (proposal only; no `LICENSE` file has been created)
+## 5. Root license (decided 2026-11-14)
 
-The repository has no license file today. Nothing is chosen. The facts that bear on the choice:
+Decided by the user: standard MIT License, `Copyright (c) 2026 pauxiel`. Implemented in the root `LICENSE` and a `"license": "MIT"` field in the root and `@recallfeed/core` manifests. Third-party material keeps its own notice: `.kiro/skills/LICENSE-agent-skills` is Addy Osmani's original MIT license, byte for byte, and `.kiro/skills/README.md` records which upstream commit each skill copy matches.
 
-- **Installed dependencies** (220 packages): 166 MIT, 20 Apache-2.0, 11 ISC, 11 BSD, 4 dual MIT/Apache, plus a few others. Three are not permissive: `lightningcss` (MPL-2.0) and `@img/sharp-libvips-darwin-arm64` (LGPL-3.0-or-later) are transitive native tools, and `caniuse-lite` is CC-BY-4.0 data. None is copied into this repository, so none constrains the repository's own license.
-- **Included third-party content:** `.kiro/skills/` holds three MIT-licensed skills by Addy Osmani. MIT requires keeping the copyright and permission notice with copies. The README credits the author and license, but I have not checked that the full notice text is included.
-- **Kiroween:** the 2025 rules required a public repository with a visible OSI-approved license ([Decoding Kiroween](https://dev.to/brian_mk/decoding-kiroween-4nm)). The 2026 rules pages returned HTTP 403 to my fetch, so this year's requirement is unverified. Check it before the final submission.
+Contest context comes from Firstmate's verified 2026 rules check (`firstmate/data/recallfeed/kiroween-2026-rules-check.md`): a public repository with a detectable open-source license file, a root `.kiro` directory, and disclosure of incorporated pre-existing work. This replaces the earlier "unverified" note, which was based on a failed fetch. The repository stays private until public visibility is approved separately.
 
-| Option | For | Against |
-|---|---|---|
-| MIT | Shortest text; matches most dependencies and the bundled skills | No explicit patent grant |
-| Apache-2.0 | Explicit patent grant and contributor terms; common for infrastructure frameworks | Longer; adds NOTICE-file convention |
-
-I would not assume either. Decisions needed from you: (1) the license, and (2) the copyright holder's name for the notice. If you approve one, I would add the root `LICENSE`, a `license` field in the package manifests, and the missing skill notice if needed.
+Installed-dependency licenses (220 packages, checked 2026-11-14): 166 MIT, 20 Apache-2.0, 11 ISC, 11 BSD, 4 dual MIT/Apache, 3 BlueOak, plus `lightningcss` (MPL-2.0), `@img/sharp-libvips-darwin-arm64` (LGPL-3.0-or-later), and `caniuse-lite` (CC-BY-4.0). None is copied into this repository.
 
 ## 6. Decisions requested
 

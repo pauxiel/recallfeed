@@ -2,6 +2,7 @@
   "name": "recallfeed",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "description": "RecallFeed: a reusable, frontend-agnostic personal knowledge-feed skeleton.",
   "type": "module",
   "packageManager": "pnpm@10.18.3",
