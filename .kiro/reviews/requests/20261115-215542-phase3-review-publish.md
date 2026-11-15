@@ -21,7 +21,7 @@
 
 The request commit and a submission-marker commit follow `7d5480a` and change no source. The baseline was unchanged: remote `main` still equalled `0a923d9` when I started and nothing unexpected was found.
 
-**Changed since the baseline:** 26 files, +2,007 / -78. Eleven commits, oldest first:
+**Changed since the baseline:** 26 files, +2,007 / -78. Ten commits, oldest first (the request and its submission marker follow them):
 
 | Commit | What |
 |---|---|
