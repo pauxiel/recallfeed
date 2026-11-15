@@ -8,10 +8,12 @@ export { countHttpRequests };
 export const databaseUrl = env.TEST_DATABASE_URL;
 
 /**
- * Time allowed for one test that talks to the real database through the local proxy. A test takes
- * (its database requests) x (the latency of one request), and only the latency varies: about 80 ms
- * locally and 115-260 ms on GitHub Actions. See DATABASE_TEST_TIMEOUT_MS in the api package's test
- * helpers for the measurements behind 30 s. Applied to the database-backed suite only, never globally.
+ * Time allowed for one test that talks to the real database through the local proxy. Such a test takes
+ * roughly (its database requests) x (the time one request takes): about 80 ms locally and an estimated
+ * 116-256 ms on GitHub Actions. Why GitHub's executions were slower has not been isolated, so this is
+ * an allowance for that condition, not a fix for its cause. See DATABASE_TEST_TIMEOUT_MS in the api
+ * package's test helpers for the measurements, and for what a Vitest timeout does and does not do.
+ * Applied to the database-backed suite only, never globally.
  */
 export const DATABASE_TEST_TIMEOUT_MS = 30_000;
 

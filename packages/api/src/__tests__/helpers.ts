@@ -10,14 +10,19 @@ export const databaseUrl = workerEnv.TEST_DATABASE_URL;
 /**
  * Time allowed for one test that talks to the real database through the local proxy.
  *
- * A test's duration is its number of database HTTP requests times the latency of one request, and
- * only the latency varies between machines. Every request costs about 80 ms on a developer machine
- * (the proxy, not PostgreSQL: a query executes in well under a millisecond) and 115-260 ms on GitHub
- * Actions. The largest test here, the feed test that seeds four cards, makes 25 requests, so it takes
- * about 2 s locally, 2.9 s on a fast runner, and 5.0 s on a slow one, which is Vitest's default limit.
- * With latency added to reproduce that, the slowest test took 6.2 s at about 230 ms per request and
- * 10.5 s at about 380 ms per request. 30 s is about three times the slowest of those, and still stops
- * a test that is truly stuck. It is applied to the database-backed suites only, never globally.
+ * What was observed: such a test takes roughly (its database HTTP requests) x (the time one request
+ * takes). The feed test that seeds four cards makes 25 requests. A request took about 80 ms on a
+ * developer machine, and about 116-256 ms on GitHub Actions (estimated from test durations, not timed
+ * per request there). That test took about 2 s locally, 2.9 s in fast CI runs, and 5.0 s in two slow
+ * ones, which reached Vitest's 5 s default. Adding a delay to every request sent to the local proxy
+ * reproduced the timeout, and this larger allowance passed under that condition: the slowest test took
+ * 6.2 s at about 230 ms per request and 10.5 s at about 380 ms per request. Why GitHub's executions
+ * were slower has not been isolated, so this is an allowance for that condition, not a fix for its cause.
+ *
+ * 30 s is about three times the slowest case measured. A Vitest timeout fails a test when it expires;
+ * it does not cancel the test's pending operations, and one local run reported a test that took 207 s
+ * against a 120 s limit. So this bounds how long a test is allowed, not how long it can run. It is
+ * applied to the database-backed suites only, never globally.
  */
 export const DATABASE_TEST_TIMEOUT_MS = 30_000;
 
