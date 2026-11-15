@@ -23,7 +23,7 @@ CPU time measures active execution only, not I/O wait. A Neon database query tha
 **Implications for RecallFeed:**
 
 - AI enrichment must always be asynchronous. Synchronous AI calls during a request will exceed the 10 ms CPU limit on the free tier.
-- Markdown parsing must be lightweight. A 100 KB file with a streaming parser costs approximately 3–6 ms CPU. Files larger than 100 KB should be rejected on the free tier.
+- Markdown parsing must be lightweight, and the input is bounded: files larger than 100 KB are rejected. The bound limits the work per request but does not prove the free-tier 10 ms CPU limit is met. Local measurements (not Cloudflare billed CPU) put parsing and hashing 100 KB at roughly 4–8 ms elapsed and a whole local import request at roughly 5–11 ms of `workerd` process CPU, so the free tier is a real risk that only a deployed measurement can settle. See the Spec 03 checklist for the figures and their limits.
 - Inngest workflows run on Inngest Cloud infrastructure, not inside the Worker. Only `inngest.send()` runs inside the Worker, which is a single HTTP subrequest consuming < 1 ms CPU.
 - However, the Inngest serve handler at `/api/inngest` executes step functions inside the Worker when Inngest Cloud calls back. Those step executions are subject to Worker CPU limits.
 

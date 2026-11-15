@@ -1,0 +1,12 @@
+{
+  // Proves the package compiles. Packages export TypeScript source inside the monorepo, so
+  // there is deliberately no `rootDir`; see packages/database/tsconfig.build.json. A failed
+  // compile must not write files, because stray .js beside .ts shadows the sources in Vite.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "noEmitOnError": true,
+    "declaration": true,
+    "outDir": "dist"
+  }
+}

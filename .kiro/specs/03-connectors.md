@@ -142,7 +142,7 @@ export class MarkdownConnector implements IConnector {
       );
     }
 
-    // Size limit: 100 KB for free-tier CPU budget safety
+    // Size limit: 100 KB bounds the work per request. It is an input bound, not proof of CPU compliance.
     const maxBytes = 100 * 1024;
     const sizeBytes = new TextEncoder().encode(content).length;
     
@@ -573,10 +573,12 @@ Notion imports run **asynchronously via Inngest** when configured. If Inngest is
   "dependencies": {
     "@recallfeed/core": "workspace:*",
     "@notionhq/client": "^2.2.15",
-    "marked": "^9.1.6"
+    "marked": "^18.2.0"
   }
 }
 ```
+
+The implementation declares `marked` as `^18.2.0` in `packages/connectors/package.json`, and `pnpm-lock.yaml` resolves it to `18.2.0`. This accepted version replaces the `^9.1.6` this example originally named. The `marked.lexer()` behavior this specification relies on is the same, and the connector tests pass on Workers and in CI. See Task 15 in `tasks/todo.md`.
 
 ---
 
@@ -615,4 +617,4 @@ packages/connectors/
 - [ ] `ConnectorRegistry.get()` throws `CONNECTOR_NOT_FOUND` for unregistered types.
 - [ ] Both connectors are registered in `src/index.ts`.
 - [ ] No connector reads environment variables directly — all credentials via `ConnectorCredentials`.
-- [ ] Markdown CPU consumption verified via benchmarks with representative content (deferred to implementation).
+- [ ] Markdown CPU consumption on Cloudflare's runtime verified for representative content. Local evidence so far (Phase 2, not Cloudflare billed CPU): parsing and hashing 100 KB took a median of 4–8 ms elapsed in local `workerd` (prose 8, code 4, mixed 6), and 4,000 tiny notes from 46 KB took 17 ms. A full local import request through `wrangler dev` used about 5 ms of `workerd` process CPU for one small note and 10–11 ms for 300 notes or 100 KB, with about 400 ms elapsed that is almost all database waiting. The 10 ms free-tier budget is therefore neither shown to be met nor shown to be exceeded. Measuring it needs a deployed Worker, which Phase 2 does not include. The 100 KB input limit and the benchmark requirement stay.

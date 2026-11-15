@@ -11,8 +11,9 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "test": "turbo run test",
-    "test:coverage": "vitest run --coverage",
+    "test": "turbo run test --concurrency=1",
+    "test:integration": "TEST_DATABASE_URL=${TEST_DATABASE_URL:-postgres://postgres:postgres@db.localtest.me:5432/recallfeed_test} pnpm test",
+    "test:coverage": "vitest run --coverage --no-file-parallelism",
     "typecheck": "tsc --noEmit -p tsconfig.json && turbo run typecheck",
     "lint": "eslint ."
   },

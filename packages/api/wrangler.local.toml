@@ -1,0 +1,15 @@
+# LOCAL DEVELOPMENT ONLY: `pnpm --filter @recallfeed/api dev:local`.
+#
+# Same Worker, but entered through src/dev-entry.ts, which first routes the exact host
+# db.localtest.me to the local Neon-compatible proxy (see packages/database/docker). The production
+# entry point, src/index.ts, never does that. Put DATABASE_URL, API_SECRET_KEY, and OWNER_EMAIL in a
+# git-ignored `.dev.vars` file next to this one; do not put them here.
+name = "recallfeed-api-local"
+main = "src/dev-entry.ts"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Local development runs the public configuration so X-API-Key works without Cloudflare Access,
+# which does not exist in `wrangler dev`. Private mode correctly refuses to run locally (no
+# ctx.access), so it is exercised by the test suite instead.
+FEED_VISIBILITY = "public"

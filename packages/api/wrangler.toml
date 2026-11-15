@@ -1,0 +1,21 @@
+# The RecallFeed API Worker (production entry point).
+#
+# This file holds non-secret defaults only. Secrets are never written here: set them with
+# `wrangler secret put <NAME>`, or, for local development, in a git-ignored `.dev.vars` file.
+#
+#   DATABASE_URL      secret  Neon connection string. Required.
+#   OWNER_EMAIL       var or secret  Private mode: the only email allowed to use the API. Required if private.
+#   API_SECRET_KEY    secret  Public mode: the key writes must send in X-API-Key. Required if public.
+#
+# FEED_VISIBILITY below is the default and fails closed: anything other than the exact value "public"
+# means private. A deployment chooses its mode by overriding this var, not by changing code.
+name = "recallfeed-api"
+main = "src/index.ts"
+
+# Pins Workers runtime behavior. Raise it deliberately, and re-run the tests when you do.
+compatibility_date = "2026-10-01"
+
+# No Node.js compatibility layer: this Worker uses only Web APIs.
+
+[vars]
+FEED_VISIBILITY = "private"

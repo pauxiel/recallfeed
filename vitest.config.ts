@@ -12,7 +12,7 @@ export default defineConfig({
     coverage: {
       // The Workers pool supports only the istanbul provider.
       provider: "istanbul",
-      include: ["packages/{core,database,feed-engine}/src/**/*.ts"],
+      include: ["packages/{core,database,connectors,feed-engine,api}/src/**/*.ts"],
       // Istanbul instruments code in both the Workers and the Node test projects. Only
       // `*-cli.ts` entry points are excluded: they run as separate processes that call
       // process.exit(), so they are verified by running them (`pnpm db:migrate`). The global

@@ -8,6 +8,8 @@ packages/*/src/**/*.js
 dist/
 build/
 coverage/
+# Vitest JSON report written by CI (and by anyone running the same command locally)
+test-results.json
 .next/
 .vite/
 .wrangler/

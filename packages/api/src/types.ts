@@ -1,0 +1,47 @@
+import type { DbClient } from "@recallfeed/database";
+
+/**
+ * The Worker environment. Behavior differs between deployments through these values only; no
+ * application-specific code lives in this package.
+ */
+export type Env = {
+  /** Neon PostgreSQL connection string. A Wrangler secret; never logged. */
+  DATABASE_URL: string;
+  /** `"public"` or `"private"`. Anything else, including unset, means private (fail closed). */
+  FEED_VISIBILITY?: string;
+  /** Private mode: the one email allowed to use the API. Required in private mode. */
+  OWNER_EMAIL?: string;
+  /** Public mode: the key writes must present in `X-API-Key`. Required for writes in public mode. */
+  API_SECRET_KEY?: string;
+};
+
+/** Visibility of the deployment. */
+export type Visibility = "private" | "public";
+
+/** Cloudflare Access identity, as `ctx.access.getIdentity()` returns it. */
+export type AccessIdentity = {
+  email?: string;
+};
+
+/** The execution context a Worker with Cloudflare Access receives. */
+export type AccessExecutionContext = ExecutionContext & {
+  access?: { getIdentity: () => Promise<AccessIdentity | null> };
+};
+
+/** Values middleware attaches to the Hono context. */
+export type Variables = {
+  /** True when the deployment is public, so reads must be limited to published content. */
+  isPublicRequest: boolean;
+  /** The verified owner's email in private mode. */
+  authenticatedEmail?: string;
+  /** Identifies a request in logs. */
+  requestId: string;
+  /** A request-scoped database client, created on first use by `getDb`. */
+  db?: DbClient;
+};
+
+/** The Hono environment type for this application. */
+export type AppEnv = {
+  Bindings: Env;
+  Variables: Variables;
+};

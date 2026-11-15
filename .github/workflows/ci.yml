@@ -1,0 +1,97 @@
+# Continuous integration: one Linux job that lints, builds, typechecks, and runs every test once
+# against a disposable PostgreSQL, with coverage thresholds enforced.
+#
+# It deploys nothing, reads no secrets, and can only read the repository. The database is the
+# throwaway Compose fixture used on a developer machine (packages/database/docker); its
+# credentials protect nothing and exist only on the runner's loopback interface.
+name: CI
+
+on:
+  pull_request: # includes draft pull requests
+  push:
+    branches: [main]
+
+# The least privilege that lets the job check out the code. No write access, no deployment.
+permissions:
+  contents: read
+
+# A newer push to the same pull request supersedes the older run. Runs on main always finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    name: Lint, build, typecheck, and database-backed tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # Same URL the local integration run uses. db.localtest.me resolves to 127.0.0.1, where the
+      # Compose fixture publishes the Neon-compatible HTTP proxy.
+      TEST_DATABASE_URL: postgres://postgres:postgres@db.localtest.me:5432/recallfeed_test
+      COMPOSE_FILE: packages/database/docker/compose.test.yaml
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # pnpm's version comes from "packageManager" in package.json, Node's from .nvmrc.
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm build
+      - run: pnpm typecheck
+
+      # Controls for the result checker used below: it must reject a missing report and skipped
+      # tests, and accept a complete one. Synthetic reports, so no database is needed.
+      - name: Test the CI result checker
+        run: node --test scripts/*.test.mjs
+
+      - name: Start the disposable database
+        run: docker compose up -d --wait
+
+      # `--wait` only knows Postgres is healthy. This sends a real query through the proxy, the same
+      # path the tests use, so the tests never start against a database that is not answering.
+      - name: Wait until the database answers through the proxy
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS -m 5 -X POST http://127.0.0.1:4444/sql \
+                 -H 'Content-Type: application/json' \
+                 -H "Neon-Connection-String: ${TEST_DATABASE_URL}" \
+                 -d '{"query":"select 1 as ok","params":[]}' | grep -q '"ok":1'; then
+              echo "database ready after ${attempt} attempt(s)"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::the database did not answer through the proxy within 60 seconds"
+          docker compose ps
+          exit 1
+
+      # One pass covers every package's unit and integration tests and enforces the 80% coverage
+      # thresholds. The root script runs files one at a time because every package shares this one
+      # database. The JSON report feeds the next step.
+      - name: Run all tests with coverage
+        id: tests
+        run: pnpm test:coverage --reporter=default --reporter=json --outputFile.json=test-results.json
+
+      # Vitest exits 0 when tests are skipped, so this step fails the job if any test was skipped or
+      # missing, and prints totals and coverage to the log and the job summary. It runs whenever the
+      # test step ran, pass or fail, and it does NOT depend on the report existing: a missing report
+      # must fail here, never skip. (If the test step was skipped, an earlier step already failed.)
+      - name: Check that every test ran
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        run: node scripts/ci-check-test-results.mjs test-results.json
+
+      - name: Show database logs after a failure
+        if: ${{ failure() }}
+        run: docker compose logs --no-color --tail=100
+
+      - name: Remove the disposable database
+        if: ${{ always() }}
+        run: docker compose down --volumes --remove-orphans

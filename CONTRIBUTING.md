@@ -31,12 +31,20 @@ skipped count:
 ```sh
 pnpm --filter @recallfeed/database db:test:up          # needs a container runtime, for example Colima
 pnpm --filter @recallfeed/database test:integration    # prints 0 skipped when the database is used
+pnpm test:integration                                  # every package against the same database, one at a time
 pnpm --filter @recallfeed/database db:test:down        # discards the disposable data
 ```
 
+`pnpm test` with `TEST_DATABASE_URL` set also reaches the database (`turbo.json` passes that variable
+to the `test` task). Either way, read the skipped count in each package's summary.
+
+`pnpm test:coverage` is one complete run of every package's tests with coverage thresholds (80%). It runs
+files one at a time (`--no-file-parallelism`): run from the root, Vitest would otherwise overlap packages on
+the shared database. With `TEST_DATABASE_URL` set it is also a full database run, which is what CI executes.
+
 Details, the reset safeguards, and limits are in `packages/database/README.md`.
 
-**Run one database integration at a time.** The Compose project name (`recallfeed-test`) and the
+**Run one database integration at a time.** `pnpm test` runs the packages one after another (`--concurrency=1`), and each package's test files run one at a time, because every package's integration tests share one database. The Compose project name (`recallfeed-test`) and the
 proxy port (`127.0.0.1:4444`) are fixed, so every checkout of this repository addresses the same
 database service. A separate Git workspace does not give you a separate database. Do not reset,
 recreate, or stop a database that another session may be using. Parallel databases would need a
