@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TEST_OWNER, accessContext, call, databaseUrl, json, privateEnv, publicEnv, seedCard } from "./helpers";
+import { DATABASE_TEST_TIMEOUT_MS, TEST_OWNER, accessContext, call, databaseUrl, json, privateEnv, publicEnv, seedCard } from "./helpers";
 
 type Item = Record<string, unknown> & { id: string };
 type FeedBody = { items: Item[] };
@@ -8,7 +8,7 @@ const PUBLIC_KEYS = ["cardType", "content", "createdAt", "id", "isAiGenerated", 
 const get = (path: string, env = publicEnv(), ctx = accessContext({ email: TEST_OWNER })): Promise<Response> =>
   call(path, { method: "GET" }, env, ctx);
 
-describe.skipIf(databaseUrl === "")("GET /feed (real PostgreSQL through the proxy)", () => {
+describe.skipIf(databaseUrl === "")("GET /feed (real PostgreSQL through the proxy)", { timeout: DATABASE_TEST_TIMEOUT_MS }, () => {
   describe("public deployment", () => {
     it("returns published cards only, oldest review time first, and hides unpublished and snoozed ones", async () => {
       // Each card seeded later is older, so it sorts first. The hidden ones are the oldest of all:

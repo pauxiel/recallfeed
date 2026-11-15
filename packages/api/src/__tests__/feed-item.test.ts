@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { TEST_OWNER, accessContext, call, databaseUrl, json, privateEnv, publicEnv, seedCard } from "./helpers";
+import { DATABASE_TEST_TIMEOUT_MS, TEST_OWNER, accessContext, call, databaseUrl, json, privateEnv, publicEnv, seedCard } from "./helpers";
 
 const PUBLIC_KEYS = ["cardType", "content", "createdAt", "id", "isAiGenerated", "noteId"];
 const get = (path: string, env = publicEnv(), ctx = accessContext({ email: TEST_OWNER })): Promise<Response> =>
   call(path, { method: "GET" }, env, ctx);
 
-describe.skipIf(databaseUrl === "")("GET /feed/:id (real PostgreSQL through the proxy)", () => {
+describe.skipIf(databaseUrl === "")("GET /feed/:id (real PostgreSQL through the proxy)", { timeout: DATABASE_TEST_TIMEOUT_MS }, () => {
   describe("public deployment", () => {
     it("a published card is returned with exactly the public fields", async () => {
       const card = await seedCard({ published: true });

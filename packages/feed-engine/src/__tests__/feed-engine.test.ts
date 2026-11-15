@@ -2,9 +2,9 @@ import { ValidationError } from "@recallfeed/core";
 import { describe, expect, it } from "vitest";
 import { generateFeedItems } from "../card-generator";
 import { DEFAULT_FEED_LIMIT, FeedEngine, MAX_FEED_LIMIT } from "../feed-engine";
-import { countHttpRequests, databaseUrl, testDb, uniqueName } from "./helpers";
+import { DATABASE_TEST_TIMEOUT_MS, countHttpRequests, databaseUrl, testDb, uniqueName } from "./helpers";
 
-describe.skipIf(databaseUrl === "")("FeedEngine (real PostgreSQL through the proxy)", () => {
+describe.skipIf(databaseUrl === "")("FeedEngine (real PostgreSQL through the proxy)", { timeout: DATABASE_TEST_TIMEOUT_MS }, () => {
   const doc = (marker: string) =>
     `# First ${marker}\n\nBody of the first note ${marker}.\n\n# Second ${marker}\n\nBody of the second note ${marker}.\n\n- a list\n- of items`;
 

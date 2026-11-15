@@ -7,6 +7,20 @@ import type { AccessExecutionContext, AccessIdentity, Env } from "../types";
 /** The disposable test database URL, or "" when integration tests are skipped. */
 export const databaseUrl = workerEnv.TEST_DATABASE_URL;
 
+/**
+ * Time allowed for one test that talks to the real database through the local proxy.
+ *
+ * A test's duration is its number of database HTTP requests times the latency of one request, and
+ * only the latency varies between machines. Every request costs about 80 ms on a developer machine
+ * (the proxy, not PostgreSQL: a query executes in well under a millisecond) and 115-260 ms on GitHub
+ * Actions. The largest test here, the feed test that seeds four cards, makes 25 requests, so it takes
+ * about 2 s locally, 2.9 s on a fast runner, and 5.0 s on a slow one, which is Vitest's default limit.
+ * With latency added to reproduce that, the slowest test took 6.2 s at about 230 ms per request and
+ * 10.5 s at about 380 ms per request. 30 s is about three times the slowest of those, and still stops
+ * a test that is truly stuck. It is applied to the database-backed suites only, never globally.
+ */
+export const DATABASE_TEST_TIMEOUT_MS = 30_000;
+
 /** Obviously fake credentials for tests. They protect nothing. */
 export const TEST_OWNER = "owner@example.test";
 export const TEST_API_KEY = "test-api-key-not-a-secret-0123456789";
