@@ -203,9 +203,21 @@ describe.skipIf(databaseUrl === "")("feed item queries (real PostgreSQL through 
     it("orders oldest effective review time first, then by id", async () => {
       const { db, items } = await cards(3);
       const [a, b, c] = items;
-      // a reviewed long ago, b reviewed recently, c never reviewed (created just now).
-      await db.query("UPDATE feed_items SET last_reviewed_at = NOW() - interval '30 days' WHERE id = $1", [a!.id]);
-      await db.query("UPDATE feed_items SET last_reviewed_at = NOW() + interval '1 hour' WHERE id = $1", [b!.id]);
+      // The feed is capped at one page and the shared database holds cards other suites seeded, so
+      // these three must sort among the very first or the page would not contain them. Each gets a
+      // time older than every card seeded before it (the clock only moves forward, so a later start is
+      // older still), one millisecond apart: a reviewed earliest, c never reviewed but created between
+      // them, b reviewed latest. c has no last_reviewed_at, so its place comes from created_at, which is
+      // what the COALESCE in the ordering is for.
+      await db.query(
+        `WITH base AS (SELECT TIMESTAMPTZ '1900-01-01' - EXTRACT(EPOCH FROM clock_timestamp()) * interval '1 second' AS t)
+         UPDATE feed_items f SET
+           last_reviewed_at = CASE f.id WHEN $1::uuid THEN (SELECT t FROM base)
+                                        WHEN $3::uuid THEN (SELECT t FROM base) + interval '2 milliseconds' END,
+           created_at       = CASE f.id WHEN $2::uuid THEN (SELECT t FROM base) + interval '1 millisecond' ELSE f.created_at END
+         WHERE f.id IN ($1::uuid, $2::uuid, $3::uuid)`,
+        [a!.id, c!.id, b!.id],
+      );
 
       const ordered = ids(await getFeedItemCandidates(db, { limit: MAX_CANDIDATE_LIMIT })).filter((id) =>
         [a!.id, b!.id, c!.id].includes(id),
