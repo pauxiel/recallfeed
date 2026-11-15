@@ -91,3 +91,15 @@ Coverage is collected in both projects. Only `*-cli.ts` entry points are exclude
 are separate processes that call `process.exit()`. They are verified by running them
 (`pnpm db:migrate`). The global setup is excluded as a test file and is exercised by every
 integration run.
+
+## Review queries (`src/queries/review-events.ts`)
+
+| Export | Purpose |
+|---|---|
+| `applyReviewAction(db, feedItemId, action, { snoozeHours })` | Changes a card and logs the event in **one statement**, so both happen or neither does. Returns the updated card, or `null` for an unknown or malformed ID, without writing anything. One database request. Each action is a fixed SQL fragment; request data never becomes SQL text. Times use the database clock, and `review_count + 1` is computed in SQL, so concurrent reviews all count. |
+| `insertReviewEvent(db, { feedItemId, action })` | The plain log insert. The foreign key refuses an unknown card, reported as `NotFoundError`. |
+| `listReviewEventsByFeedItem(db, feedItemId)` | A card's events, oldest first. |
+| `MAX_SNOOZE_HOURS` | 8760, the longest snooze accepted. |
+
+The review log is immutable by construction: the module has no function that updates or deletes an event, and
+a test fails if one is added. (Deleting a source still removes its cards' events through the foreign key.)
