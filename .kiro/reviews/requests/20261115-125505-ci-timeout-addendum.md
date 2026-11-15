@@ -40,7 +40,7 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit): Promis
 
 ### 1b. The five runs, with the settings that differ
 
-All from `packages/api`, `TEST_DATABASE_URL=postgres://postgres:postgres@db.localtest.me:5432/recallfeed_test`, config `vitest.latency.config.ts`, Node 22.23.3. The source tree was `fix/ci-integration-test-timeout` at the correction commit `95fcbd8`, plus the untracked shim, config and `zz-timing-diagnostic.test.ts` (which `include: src/**/*.test.ts` picked up).
+All from `packages/api`, `TEST_DATABASE_URL=postgres://postgres:postgres@db.localtest.me:5432/recallfeed_test`, config `vitest.latency.config.ts`, Node 22.23.3. All five ran **before the timeout correction existed**: the source tree was the base `ac40227` (the merged `main`, with no timeout option anywhere), plus the untracked shim, config and `zz-timing-diagnostic.test.ts` (which `include: src/**/*.test.ts` picked up). The 30,000 ms constant was added afterwards.
 
 | Run | Command (after `EXTRA_LATENCY_MS=…`) | Files / tests | Effective `testTimeout` | Outcome |
 |---|---|---|---|---|
@@ -99,7 +99,7 @@ The stall is **unexplained and recurrence is not ruled out.** The runs that pass
 | todo.md, PR #3, earlier request | "116-256 ms per request" on GitHub | An **estimate** from dividing test durations by request counts, assuming proportionality. |
 | todo.md, earlier request | "no lock waits were seen" | Not established: the database was not sampled during any run (see 1b). |
 | earlier request, `helpers.ts` comment | "30 s still stops a test that is truly stuck" | **A Vitest timeout marks a test failed when it expires. It does not cancel or interrupt the operations the test started**, so it bounds how long a test is allowed and not how long it can run. Run B is an example: a 120 s limit and a 207 s test. |
-| todo.md, earlier request | the stall "coincided with" `Network connection lost`, the message the original failures logged | **Withdrawn.** That message appears twice in **every** saved CI log, including all seven passing runs, from `worker-entry.test.ts`, whose test deliberately targets an unreachable proxy port. |
+| todo.md, earlier request | the stall "coincided with" `Network connection lost`, the message the original failures logged | **Withdrawn.** That message appears twice in **every** saved CI log, including all seven passing runs. Where a test header is nearby it is the output of `worker-entry.test.ts`, whose test deliberately targets an unreachable proxy port. I did not trace every occurrence, so I call it expected output and do not claim a single source. |
 | todo.md, PR #3 | "both red runs were `push` and all green were `pull_request`" as the open alternative | Still true of the first six runs, but see section 3. |
 
 ---
