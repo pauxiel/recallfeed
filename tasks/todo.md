@@ -646,8 +646,8 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 **Status:**
 - [x] Implemented (commit: `da29fbc`)
 - [x] Verified (self-tested: 2026-11-14, Node 22.23.3, pnpm 10.18.3, PostgreSQL 17.12 fixture: `upsertSource`, `getSourceById`, `updateSourceSyncedAt` tested against the real database through the Neon-compatible proxy (database package: 114 workerd + 17 node tests, 0 skipped with `TEST_DATABASE_URL`; 61 + 13 pass and 53 + 4 skip without it). No unique index on `sources.name` exists (Spec 02 approved, no schema change), so `upsertSource` takes a transaction-scoped advisory lock and runs a CTE upsert; a deterministic lock-wait test replaced a probabilistic race test after mutation checks showed the latter was weak. See full gate in the Phase 2 Execution Record below.)
-- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
-- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are docs only.)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14-phase2-and-ci.md`: **APPROVE WITH CONDITIONS**, reviewed revision `28b4bd1d64624b8f8c194dd8c7ecacaf0bc5b7da`. Conditions C1 (CI report check) and C2 (stale `marked` example) are corrections made afterwards and are **not yet independently confirmed**; see the Phase 2 Execution Record.)
+- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are listed in the Phase 2 Execution Record.)
 - [ ] Merged (not merged)
 
 **Files created:**
@@ -684,8 +684,8 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 **Status:**
 - [x] Implemented (commit: `da29fbc`)
 - [x] Verified (self-tested: 2026-11-14: `upsertNotes` (batch `jsonb_to_recordset` with `ON CONFLICT (source_id, content_hash)`), `upsertNote`, `getNotesBySourceId`, `getNotesMissingCardType` tested against real PostgreSQL, including source-scoped dedup (same text under two sources is two notes), parameterized-SQL injection strings, and empty batches. One mutant (`getNotesMissingCardType` returning all notes) is equivalent in effect except payload size. See full gate in the Phase 2 Execution Record below.)
-- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
-- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are docs only.)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14-phase2-and-ci.md`: **APPROVE WITH CONDITIONS**, reviewed revision `28b4bd1d64624b8f8c194dd8c7ecacaf0bc5b7da`. Conditions C1 (CI report check) and C2 (stale `marked` example) are corrections made afterwards and are **not yet independently confirmed**; see the Phase 2 Execution Record.)
+- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are listed in the Phase 2 Execution Record.)
 - [ ] Merged (not merged)
 
 **Files created:**
@@ -723,8 +723,8 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 **Status:**
 - [x] Implemented (commit: `da29fbc`)
 - [x] Verified (self-tested: 2026-11-14: `insertFeedItems`, `insertFeedItem`, `getFeedItemCandidates` (published and snooze filters, fixed order `COALESCE(last_reviewed_at, created_at) ASC, id ASC`), `getFeedItemById` tested against real PostgreSQL. **Deviation:** `afterId`/`afterSortKey` (cursor inputs) are deliberately not implemented; the multi-key cursor shape is an open decision for Task 27 (Spec 04 single scalar `sortKey` vs Task 26's two-key importance order), so no final strategy-dependent pagination is claimed. See full gate in the Phase 2 Execution Record below.)
-- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
-- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are docs only.)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14-phase2-and-ci.md`: **APPROVE WITH CONDITIONS**, reviewed revision `28b4bd1d64624b8f8c194dd8c7ecacaf0bc5b7da`. Conditions C1 (CI report check) and C2 (stale `marked` example) are corrections made afterwards and are **not yet independently confirmed**; see the Phase 2 Execution Record.)
+- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are listed in the Phase 2 Execution Record.)
 - [ ] Merged (not merged)
 
 **Files created:**
@@ -760,8 +760,8 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 **Status:**
 - [x] Implemented (commit: `6381ef3`)
 - [x] Verified (self-tested: 2026-11-14: `pnpm --filter @recallfeed/connectors build` and typecheck exit 0. **Deviation:** the registry is a class (`register`/`get`, throws `CONNECTOR_NOT_FOUND`), as Spec 03 defines it, not the `Map` this task sketched. Only the Markdown connector is registered; Notion is deferred. See full gate in the Phase 2 Execution Record below.)
-- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
-- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are docs only.)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14-phase2-and-ci.md`: **APPROVE WITH CONDITIONS**, reviewed revision `28b4bd1d64624b8f8c194dd8c7ecacaf0bc5b7da`. Conditions C1 (CI report check) and C2 (stale `marked` example) are corrections made afterwards and are **not yet independently confirmed**; see the Phase 2 Execution Record.)
+- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are listed in the Phase 2 Execution Record.)
 - [ ] Merged (not merged)
 
 **Files created:**
@@ -802,8 +802,8 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 **Status:**
 - [x] Implemented (commit: `6381ef3`)
 - [x] Verified (self-tested: 2026-11-14: connectors package, 57 tests pass (0 skipped), plus an informational benchmark file. **Deviations:** `marked` 18.2.0 is used where Spec 03 names ^9.1.6 (the token shapes this connector reads were checked identical); hashing uses async `crypto.subtle.digest` because the spec's `digestSync` does not exist; `sourceCreatedAt` is set only from a frontmatter date. This task's example `# Note 1 ... --- # Note 2` yields one note under Spec 03 (empty sections are dropped); the spec governs. A `marked` stack overflow on deeply nested input is caught and degrades to one plain-text note. See full gate in the Phase 2 Execution Record below.)
-- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
-- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are docs only.)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14-phase2-and-ci.md`: **APPROVE WITH CONDITIONS**, reviewed revision `28b4bd1d64624b8f8c194dd8c7ecacaf0bc5b7da`. Conditions C1 (CI report check) and C2 (stale `marked` example) are corrections made afterwards and are **not yet independently confirmed**; see the Phase 2 Execution Record.)
+- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are listed in the Phase 2 Execution Record.)
 - [ ] Merged (not merged)
 
 **Files created:**
@@ -841,8 +841,8 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 **Status:**
 - [x] Implemented (commit: `524c1b8`)
 - [x] Verified (self-tested: 2026-11-14: feed-engine package, 38 tests pass with the database (17 pass, 21 skip without); build, typecheck, lint exit 0. A 300-note import measured 5 HTTP requests to the database (4 on repeat), against the free-tier limit of 50. `FeedEngine.importMarkdown` returns `{ sourceId, queued, notesImported, feedItemsCreated }` (`notesImported` = notes now stored, `feedItemsCreated` = cards created by this call). See full gate in the Phase 2 Execution Record below.)
-- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
-- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are docs only.)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14-phase2-and-ci.md`: **APPROVE WITH CONDITIONS**, reviewed revision `28b4bd1d64624b8f8c194dd8c7ecacaf0bc5b7da`. Conditions C1 (CI report check) and C2 (stale `marked` example) are corrections made afterwards and are **not yet independently confirmed**; see the Phase 2 Execution Record.)
+- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are listed in the Phase 2 Execution Record.)
 - [ ] Merged (not merged)
 
 **Files created:**
@@ -886,8 +886,8 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 **Status:**
 - [x] Implemented (commit: `6a892d7` (package, configs), `3996cdb` (Worker entries, `wrangler.toml`, `wrangler.local.toml`))
 - [x] Verified (self-tested: 2026-11-14: `wrangler dev --config wrangler.local.toml` (wrangler 4.162.0, pinned) started and served requests from `src/dev-entry.ts` on port 8799 (the default is 8787; this run chose a port to avoid a clash). Production `src/index.ts` passes `env` and `ctx` through and never routes the local database proxy (tested). `wrangler.toml` defaults `FEED_VISIBILITY` to `private`. `.dev.vars` used for the smoke test was git-ignored and deleted afterwards. **Limit:** `wrangler dev` has no Cloudflare Access, so local dev runs the public mode; private mode is verified through the test suite with a real `ctx.access` interface. See full gate in the Phase 2 Execution Record below.)
-- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
-- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are docs only.)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14-phase2-and-ci.md`: **APPROVE WITH CONDITIONS**, reviewed revision `28b4bd1d64624b8f8c194dd8c7ecacaf0bc5b7da`. Conditions C1 (CI report check) and C2 (stale `marked` example) are corrections made afterwards and are **not yet independently confirmed**; see the Phase 2 Execution Record.)
+- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are listed in the Phase 2 Execution Record.)
 - [ ] Merged (not merged)
 
 **Files created:**
@@ -940,8 +940,8 @@ Run 2026-11-14 under the user's correction-only authorization, from `firstmate/d
 **Status:**
 - [x] Implemented (commit: `6a892d7`, tests added in `d53caab`)
 - [x] Verified (self-tested: 2026-11-14: 104 middleware tests pass in workerd with no database; 6 mutation checks on the auth, CSRF and redaction code were caught, and all 6 mutants of the error handler were caught. **Decisions where an approved spec wins over this task:** an invalid key is 403 `AUTH_API_KEY_INVALID` and a missing key is 401 `AUTH_API_KEY_MISSING` (Spec 05; this task said 401 for both); `requireApiKey` always enforces the key (the Spec 05 sketch passed through in private mode). Identity comes only from `ctx.access.getIdentity()`; no header, cookie or query value can supply one. Visibility fails closed: only the exact string `public` is public. CSRF runs before auth and is private-mode only. No permissive placeholder or production bypass exists. See full gate in the Phase 2 Execution Record below.)
-- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
-- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are docs only.)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14-phase2-and-ci.md`: **APPROVE WITH CONDITIONS**, reviewed revision `28b4bd1d64624b8f8c194dd8c7ecacaf0bc5b7da`. Conditions C1 (CI report check) and C2 (stale `marked` example) are corrections made afterwards and are **not yet independently confirmed**; see the Phase 2 Execution Record.)
+- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are listed in the Phase 2 Execution Record.)
 - [ ] Merged (not merged)
 
 **Files created:**
@@ -993,8 +993,8 @@ Content here"
 **Status:**
 - [x] Implemented (commit: `3996cdb`)
 - [x] Verified (self-tested: 2026-11-14: 41 import tests against real PostgreSQL (public API key and private owner paths; 401/403 and CSRF with nothing written; size 9/10 bytes and 100 KB / +1 byte boundaries; streamed bodies of unknown length are cut off shortly after the cap; content-type, UTF-8, JSON shape; duplicate import creates no cards; SQL-injection text stored literally; exact four-field response). Mutation checks: 9 of 9 import mutants caught (two survivors from the first round led to a new streaming-read test). Manual smoke through `wrangler dev` and the proxy: no key 401, wrong key 403, import 200 with `notesImported 2, feedItemsCreated 2`, repeat `feedItemsCreated 0`. See full gate in the Phase 2 Execution Record below.)
-- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
-- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are docs only.)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14-phase2-and-ci.md`: **APPROVE WITH CONDITIONS**, reviewed revision `28b4bd1d64624b8f8c194dd8c7ecacaf0bc5b7da`. Conditions C1 (CI report check) and C2 (stale `marked` example) are corrections made afterwards and are **not yet independently confirmed**; see the Phase 2 Execution Record.)
+- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are listed in the Phase 2 Execution Record.)
 - [ ] Merged (not merged)
 
 **Files created:**
@@ -1040,8 +1040,8 @@ Content here"
 **Status:**
 - [x] Implemented (commit: `3996cdb`)
 - [x] Verified (self-tested: 2026-11-14: 27 tests against real PostgreSQL (public: published-only, exact six public keys, snoozed hidden, limit 1-50 with invalid values 400 not clamped, `?cursor=` 400 `VALIDATION_CURSOR_UNSUPPORTED`; private: owner sees all fields, 401 anonymous, 403 other user, a valid API key does not open it, no `FEED_VISIBILITY` is private, `private, no-store` on every response including errors). Tests give each seeded card a review time older than every earlier card so they stay on the first page of the shared fixture. 9 of 10 route mutants caught; the survivor (the route's own limit bounds check) is equivalent because the engine repeats the check. **Scope:** returns `{ items }` with no `nextCursor`; cursor pagination and strategy ordering are Phase 4. See full gate in the Phase 2 Execution Record below.)
-- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
-- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are docs only.)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14-phase2-and-ci.md`: **APPROVE WITH CONDITIONS**, reviewed revision `28b4bd1d64624b8f8c194dd8c7ecacaf0bc5b7da`. Conditions C1 (CI report check) and C2 (stale `marked` example) are corrections made afterwards and are **not yet independently confirmed**; see the Phase 2 Execution Record.)
+- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are listed in the Phase 2 Execution Record.)
 - [ ] Merged (not merged)
 
 **Files created:**
@@ -1080,8 +1080,8 @@ Content here"
 **Status:**
 - [x] Implemented (commit: `3996cdb`)
 - [x] Verified (self-tested: 2026-11-14: 9 tests against real PostgreSQL (public: published card returns exactly six keys; an unpublished card, a missing card, a malformed ID and an injection string return the identical 404 body; identity does not unlock an unpublished card in public mode; private: owner reads all fields, 401/403 do not reveal whether a card exists, 404 carries the private cache policy, missing or unrecognized `FEED_VISIBILITY` never serves anonymously). Mutations on this route are covered by the Task 20 run. See full gate in the Phase 2 Execution Record below.)
-- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
-- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are docs only.)
+- [x] Reviewed (Firstmate independent review 2026-11-14, `firstmate/data/recallfeed/reviews/2026-11-14-phase2-and-ci.md`: **APPROVE WITH CONDITIONS**, reviewed revision `28b4bd1d64624b8f8c194dd8c7ecacaf0bc5b7da`. Conditions C1 (CI report check) and C2 (stale `marked` example) are corrections made afterwards and are **not yet independently confirmed**; see the Phase 2 Execution Record.)
+- [x] Pushed (`origin/phase/gate2-phase2-markdown-slice` = `d6ff37aa503543b616a81179fe8ab8d7dded1dbb`, read back with `git ls-remote` on 2026-11-14; non-forced; draft PR #2. Later commits on the branch are listed in the Phase 2 Execution Record.)
 - [ ] Merged (not merged)
 
 **Files created:**
@@ -1107,7 +1107,7 @@ Content here"
 
 ## Phase 2 Execution Record (Tasks 11-21)
 
-Branch `phase/gate2-phase2-markdown-slice`, started at `8222b7c`. Pushed to `origin` (non-forced) on 2026-11-14 as a **draft** pull request, https://github.com/pauxiel/recallfeed/pull/2, targeting `main`. **Not merged and not independently reviewed.** Tasks 22 and later are not started.
+Branch `phase/gate2-phase2-markdown-slice`, started at `8222b7c`. Pushed to `origin` (non-forced) on 2026-11-14 as a **draft** pull request, https://github.com/pauxiel/recallfeed/pull/2, targeting `main`. **Independently reviewed by Firstmate: APPROVE WITH CONDITIONS at `28b4bd1`. Not merged.** The two conditions were then corrected on this branch; those corrections are not yet independently confirmed. Tasks 22 and later are not started.
 
 **Commits:** `da29fbc` (Tasks 11-13), `6381ef3` (14-15), `524c1b8` (16), `6a892d7` (17-18 middleware layer), `3996cdb` (17, 19-21 routes, entries, README), `ab7be8d` (CPU wording in specs and steering), `d53caab` (error-handler tests), `81f3fc1` (Turbo env fix, order-independent seeding, coverage scope). This record is committed after them.
 
@@ -1157,6 +1157,29 @@ Authorized as a CI-only follow-up on this branch. Added in three separate commit
 - CI proves the code runs on Linux amd64 in Node, with workerd. It does not exercise Cloudflare itself, a real Neon database, or Cloudflare Access.
 - Nothing was done to repository settings or branch protection, so the check is not a required status. No deployment, hosted database, or secrets exist.
 - A first run on a PR is not evidence of stability: this is one passing run.
+
+### Independent review (Firstmate)
+
+Recorded as received, not as my own judgement. Review file: `firstmate/data/recallfeed/reviews/2026-11-14-phase2-and-ci.md`.
+- **Verdict: APPROVE WITH CONDITIONS at `28b4bd1d64624b8f8c194dd8c7ecacaf0bc5b7da`.** The Phase 2 application slice and the minimal CI approach are accepted within their bounded scope. The verdict does not authorize merge, deployment, cleanup or the next phase.
+- **C1:** the `Check that every test ran` step was conditioned on `hashFiles('test-results.json') != ''`, so a missing report skipped the check instead of failing the job. Firstmate describes this as a structural finding and states that none of the observed runs omitted tests and that a missing-report failure was not reproduced remotely.
+- **C2:** `.kiro/specs/03-connectors.md` still showed `marked: ^9.1.6` while the accepted implementation uses 18.2.0. No downgrade was requested.
+- It independently confirmed: the GitHub run (28 files, 422 tests, 0 skipped, coverage 96.09 / 91.98 / 98.21 / 95.97); its own isolated lint, build, typecheck and ordinary tests (266 passed, 156 skipped without a database, which is not a database run); a database-free coverage run that fails the thresholds and is rejected by the checker; seven synthetic checker controls; hashes in both handoffs; and 17 real-HTTP assertions without database mutation.
+- It did **not** independently rerun the full database mutation suite, a deployed Access, hosted Neon, billed CPU or a two-app demo, and it noted that CI cleanup after a failure was not exercised remotely.
+
+### Corrections after that review (mine; not independently confirmed)
+
+Authorized by the user after Firstmate's review. Application code under `packages/` is unchanged (diff empty; the four reference file hashes match the previous handoff).
+- `fe22fdf` **C1.** The result check now runs whenever the test step ran (`steps.tests.outcome != 'skipped'`), with no dependence on the report existing. The script now fails a missing, empty, or non-Vitest report with a one-line reason instead of a raw `ENOENT` stack trace. New `scripts/ci-check-test-results.test.mjs` (Node's built-in `node:test`, no new dependency, 9 controls) runs as one CI step, `node --test scripts/*.test.mjs`.
+- `a6f0ebe` **C2.** One dependency line in the Spec 03 example changed from `^9.1.6` to `^18.2.0`, plus a note recording that `packages/connectors/package.json` declares `^18.2.0` and `pnpm-lock.yaml` resolves `18.2.0`. The library is not downgraded and the rest of the spec is unchanged.
+
+**My verification of the corrections:**
+- `node --test scripts/*.test.mjs`: 9 of 9 pass against the corrected checker.
+- Mutation checks of the controls: restoring the previous checker fails exactly the missing-report, empty-report and non-Vitest-report controls (6 other controls still pass); removing skip detection fails exactly the skipped-tests control (8 others pass). The missing-report control asserts the specific message and rejects a stack trace, because the previous checker also exited 1 on a missing report, through a crash.
+- `actionlint` no findings; `pnpm lint` exit 0.
+- GitHub: run https://github.com/pauxiel/recallfeed/actions/runs/43660308344 on `a6f0ebe` (`pull_request`, `ubuntu-24.04`) **success**, 3m08s. The log shows the 9 checker controls passing on the runner, database ready after 1 attempt, 28 files, 422 tests, 0 skipped, 0 failed, coverage 96.09 / 91.98 / 98.21 / 95.97, 0 annotations.
+
+**Not verified:** a missing report was **not** reproduced on GitHub; the evidence is the local controls and mutation checks. CI cleanup after a failure is still not exercised on a runner. Firstmate's other notes were left alone on purpose, because only C1 and C2 were authorized: SHA pinning of actions, the readiness timeout text that says 60 seconds while the loop can take longer, and a few whitespace findings from `git diff --check`.
 
 **Known limits:**
 - Private mode cannot run under `wrangler dev` (no Cloudflare Access). It is verified through the test suite with a `ctx.access` object shaped like the real one, not against a real Access deployment.
