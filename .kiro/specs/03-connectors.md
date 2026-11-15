@@ -573,10 +573,12 @@ Notion imports run **asynchronously via Inngest** when configured. If Inngest is
   "dependencies": {
     "@recallfeed/core": "workspace:*",
     "@notionhq/client": "^2.2.15",
-    "marked": "^9.1.6"
+    "marked": "^18.2.0"
   }
 }
 ```
+
+The implementation declares `marked` as `^18.2.0` in `packages/connectors/package.json`, and `pnpm-lock.yaml` resolves it to `18.2.0`. This accepted version replaces the `^9.1.6` this example originally named. The `marked.lexer()` behavior this specification relies on is the same, and the connector tests pass on Workers and in CI. See Task 15 in `tasks/todo.md`.
 
 ---
 
