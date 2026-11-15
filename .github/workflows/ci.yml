@@ -47,6 +47,11 @@ jobs:
       - run: pnpm build
       - run: pnpm typecheck
 
+      # Controls for the result checker used below: it must reject a missing report and skipped
+      # tests, and accept a complete one. Synthetic reports, so no database is needed.
+      - name: Test the CI result checker
+        run: node --test scripts/*.test.mjs
+
       - name: Start the disposable database
         run: docker compose up -d --wait
 
@@ -72,12 +77,15 @@ jobs:
       # thresholds. The root script runs files one at a time because every package shares this one
       # database. The JSON report feeds the next step.
       - name: Run all tests with coverage
+        id: tests
         run: pnpm test:coverage --reporter=default --reporter=json --outputFile.json=test-results.json
 
       # Vitest exits 0 when tests are skipped, so this step fails the job if any test was skipped or
-      # missing, and prints totals and coverage to the log and the job summary.
+      # missing, and prints totals and coverage to the log and the job summary. It runs whenever the
+      # test step ran, pass or fail, and it does NOT depend on the report existing: a missing report
+      # must fail here, never skip. (If the test step was skipped, an earlier step already failed.)
       - name: Check that every test ran
-        if: ${{ !cancelled() && hashFiles('test-results.json') != '' }}
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
         run: node scripts/ci-check-test-results.mjs test-results.json
 
       - name: Show database logs after a failure

@@ -15,7 +15,29 @@ if (resultsPath === undefined) {
   process.exit(2);
 }
 
-const results = JSON.parse(readFileSync(resultsPath, "utf8"));
+/** Prints a failure where a reviewer will see it (log and job summary) and exits 1. */
+function failNow(message) {
+  const text = `### Test results\n\n**Result: FAILED**\n- ${message}`;
+  console.error(text);
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${text}\n`);
+  }
+  process.exit(1);
+}
+
+// A missing or unreadable report is a failure, never a pass: without it nothing proves the tests ran.
+if (!existsSync(resultsPath)) {
+  failNow(`no test report at ${resultsPath}. The test step must write it with --reporter=json --outputFile.json=<path>`);
+}
+let results;
+try {
+  results = JSON.parse(readFileSync(resultsPath, "utf8"));
+} catch (error) {
+  failNow(`the test report at ${resultsPath} is not valid JSON (${error.message})`);
+}
+if (!Array.isArray(results.testResults)) {
+  failNow(`the test report at ${resultsPath} has no testResults list, so it is not a Vitest JSON report`);
+}
 const problems = [];
 
 // Count files and tests per package from the file paths, so a package that silently stops
