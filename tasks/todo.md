@@ -1266,9 +1266,11 @@ Cut from remote `main` `ac40227060d962617367ed132102d392b530be8a` in a fresh lea
 - [ ] Negative auth test: No auth → 401
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: integration test with all actions + invalid-action test)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `7db6fc0` (with `7398acd` for `FeedEngine.recordReview` and `c2ed3f1` for the shared bounded body reader))
+- [x] Verified (self-tested: 2026-11-15: `PUT /feed/:id/review` for all six actions against real PostgreSQL. 84 endpoint tests plus 26 configuration tests (`review.test.ts`, `snooze-config.test.ts`) and 12 engine tests. Covers every action's field changes, the response shape (exactly `id, reviewCount, lastReviewedAt, savedAt, snoozedUntil, isPublished`), the invalid-action test (`{action: "invalid"}` is 400 `VALIDATION_REVIEW_ACTION`) with 16 further invalid bodies, the content-type, size (1 KB), JSON and UTF-8 rules, 404 for an unknown or malformed ID, negative authorization (401, 403, no key, wrong key, identity in public mode, key in private mode, unset or unrecognized `FEED_VISIBILITY`), CSRF (cross-origin, `null`, missing, Referer), private `Cache-Control: private, no-store`, that authorization precedes the body and the lookup, that extra body fields are ignored, and that there is no separate publish endpoint. **Mutation-checked:** 11 endpoint mutants, all caught, plus 4 engine mutants of which 3 are caught and 1 is equivalent in behavior (the engine's own action check, duplicated by the database layer, kept as defense in depth). **Deviations:** the endpoint uses `FeedEngine.recordReview`, which calls the one-statement `applyReviewAction`, and does not call `insertReviewEvent` separately (Task 22's note), for the atomicity reason under Task 24. `SNOOZE_DEFAULT_HOURS` is a new optional variable (default 24, whole number 1 to 8760); a set but unusable value is a generic 500 for `snoozed` only. It is documented in the `wrangler.toml` comments and the API README; **`docs/setup.md`, which the conventions name as the place for new variables, does not exist in the repository**, so it is not documented there. The bounded body reader moved unchanged out of the import route into `request-body.ts` so both routes share one copy; the 41 import tests still pass. See the Phase 3 Execution Record.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `feat/gate2-phase3-review-publish` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/api/src/routes/review.ts`
@@ -1299,9 +1301,11 @@ Cut from remote `main` `ac40227060d962617367ed132102d392b530be8a` in a fresh lea
 - [ ] State transition tests verify database state after each action
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `TEST_DATABASE_URL=... pnpm test`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `979f92f` (shared action list in core), `2d19cc5` (queries and tests))
+- [x] Verified (self-tested: 2026-11-15, Node 22.23.3, pnpm 10.18.3, PostgreSQL 17.12 fixture: `insertReviewEvent`, `listReviewEventsByFeedItem` and `applyReviewAction` against real PostgreSQL. 50 new database tests; the database package passes 181 tests (164 workerd + 17 node), 0 skipped. Foreign key enforced and verified: an unknown card is refused by `review_events_feed_item_id_fkey` (SQLSTATE 23503) and reported as `NotFoundError`, matched on the constraint name. Immutable: the module and the package export no update or delete function for events, and a test fails if one is added (the name check was itself tested against real mutator names). **Mutation-checked:** 12 mutants, all caught (no increment, snooze in minutes, publish sets FALSE, no event logged, UPDATE without WHERE, hard-coded event action, unmapped FK error, unsave sets a time, no action validation, no snooze upper or lower bound, a malformed ID queried). **Deviations:** the function that changes a card is `applyReviewAction`, one statement that updates the card and inserts its event (a data-modifying CTE), not the two separate calls Spec 04's sketch makes, so an unknown card changes and logs nothing and returns null instead of surfacing a foreign-key error, and both effects happen or neither; `insertReviewEvent` is kept as the plain log insert the task names. Spec 02 calls it `createReviewEvent`; Task 24, Spec 04 and the plan say `insertReviewEvent`, which is what is used. Core gained `REVIEW_ACTIONS` and `isReviewAction` (with a compile-time check that they cover every `ReviewAction`, mutation-checked both ways) because validation needs the list at runtime. See the Phase 3 Execution Record.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `feat/gate2-phase3-review-publish` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/api/src/__tests__/review-integration.test.ts`
@@ -1331,9 +1335,11 @@ Cut from remote `main` `ac40227060d962617367ed132102d392b530be8a` in a fresh lea
 - [ ] Foreign key test: Invalid feedItemId → constraint violation error
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `TEST_DATABASE_URL=... pnpm test`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `0cc7cea`)
+- [x] Verified (self-tested: 2026-11-15: `review-integration.test.ts`, 20 tests through the real app against real PostgreSQL, checking the response and the database row after each action. `reviewed` (count, time, five concurrent), `saved` to `unsaved` to `saved`, `snoozed` (hidden from the public and owner lists until the snooze expires, simulated by moving `snoozed_until` into the past, still fetchable by ID, replaced by a later snooze), `published` to `unpublished` (an anonymous visitor sees the card only while it is published, with the identical 404 once it is not, and a private deployment exposes nothing), the ordered event log, a refused request writing no event, cascade on delete, independence between cards, and a 24-step pseudo-random sequence checked against an independent model after every step. **Mutation-checked:** 7 mutants through the SQL layer, all caught (publish also snoozes, review clears the saved flag, unpublish does nothing, snooze in the past, save clears, review leaves the time alone, update touches every row). See the Phase 3 Execution Record.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `feat/gate2-phase3-review-publish` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/database/src/queries/review-events.ts`
@@ -1343,9 +1349,53 @@ Cut from remote `main` `ac40227060d962617367ed132102d392b530be8a` in a fresh lea
 
 ---
 
+## Phase 3 Execution Record (Tasks 24, 22, 23)
+
+Branch `feat/gate2-phase3-review-publish`, started at `0a923d9702b6ea2c47b0eff7d18f79b2695b19c9` (remote `main`, verified live before branching; the primary checkout's local `main` was stale and not used). Treehouse workspace `~/.treehouse/recallfeed-38ad39/3/recallfeed`, lease `6911139c0d8f4e9624de199b9af85364`, holder `recallfeed-kiro`. **Local only: not pushed, no pull request, not merged, not reviewed.** Tasks 25 and later are not started. The earlier branches and their workspaces are untouched.
+
+**Commits (oldest first):** `c2ed3f1` bounded body reader moved to its own module (no behavior change); `979f92f` core `REVIEW_ACTIONS`; `2d19cc5` Task 24; `7398acd` `FeedEngine.recordReview`; `7db6fc0` Task 22; `0cc7cea` Task 23; `54e7a7c` documentation; `0c28020` a fix to an existing Phase 2 test. The record and review request follow.
+
+**Gate at `0c28020`** (Node 22.23.3, pnpm 10.18.3, PostgreSQL 17.12 through the Neon-compatible proxy; build outputs removed first; `TURBO_FORCE=true`; I was the only user of the shared fixture, checked before each run):
+
+| Check | Result |
+|---|---|
+| `pnpm lint` | exit 0 |
+| `pnpm build` | exit 0, 5 of 5 tasks, 0 cached |
+| `pnpm typecheck` | exit 0, 5 of 5 tasks, 0 cached |
+| `node --test scripts/*.test.mjs` (CI checker controls) | 9 of 9 |
+| `pnpm test:coverage --reporter=default --reporter=json --outputFile.json=test-results.json` (the CI command), then `node scripts/ci-check-test-results.mjs test-results.json` | exit 0; **33 files, 642 tests, 0 skipped, 0 failed**; checker `every test ran and passed` |
+| Per package | api 316, connectors 57, core 38, database 181, feed-engine 50 |
+| Coverage | 96.24% statements, 92.1% branches, 98.37% functions, 96.14% lines (threshold 80% each). New files: `snooze-config.ts` 100%, `review.ts` 100% of lines, `review-events.ts` 94% (the uncovered lines are a defensive "no row returned" throw and the rethrow of a non-foreign-key error). |
+
+Before this phase: 422 tests. This phase added 220, none skipped.
+
+**A failure the full run exposed (fixed, in its own commit `0c28020`):** the first full serial run failed one existing Phase 2 test in the database package, `orders oldest effective review time first, then by id`. It passes alone. `getFeedItemCandidates` returns at most 200 cards, oldest effective review time first; that test created three cards dated 30 days ago, now and an hour ahead and looked for them in that page. Once other suites have left enough ancient-dated cards in the shared database (114 among 546 at that point), those three fall off the first 200. This is the same fixture-size dependence the CI-timeout work met. The three cards now get times older than every earlier card, one millisecond apart, with the never-reviewed one ordered by `created_at`, so the test still checks exactly the `COALESCE` ordering. Three ordering mutants are caught. Test only; no application code changed.
+
+**Other verification:**
+- Every behavior commit was mutation-checked: 12 database mutants, 4 engine (one equivalent), 11 endpoint, 7 integration, and 2 compile-time mutants of the action list, 36 in all; the single survivor is the equivalent one above.
+- `wrangler deploy --dry-run` parsed the edited `wrangler.toml` and bundled the Worker with the new route. It deploys nothing.
+- After every save under `packages/`, the Skeleton Crew greps found no demo-app names in `packages/`, no `packages/*` import of `apps/*`, and no sibling import in `packages/core`. The database package imports only `core`.
+
+**Design decisions and deviations, for challenge:**
+1. **One statement, not two.** `applyReviewAction` updates the card and logs the event in one SQL statement. Spec 04's sketch inserts the event first and then updates, which for an unknown card makes a 404 into a foreign-key 500 and can log an event for a state change that then fails. Cost: one database request per review.
+2. **Naming:** `insertReviewEvent` (Task 24, Spec 04, plan) rather than Spec 02's `createReviewEvent`. The endpoint uses the atomic function, so `insertReviewEvent` is exported, tested and documented but not called by the route.
+3. **Times come from the database clock** (`NOW()`), so `last_reviewed_at` equals the event's `created_at` and there is no Worker-versus-database skew.
+4. **`SNOOZE_DEFAULT_HOURS`** is a new variable (Spec 04 reads it; Spec 05 says only "configured hours"). Strict whole number 1 to 8760; unset is 24; a bad value fails only `snoozed`, generically, without echoing it.
+5. **Check order:** CSRF, authorization, body, then the database. A refused request reads no body and learns nothing about whether a card exists. A bad action for an unknown card is 400, not 404.
+6. **`saved` on an already saved card** sets a new time, as Spec 05 says ("set saved timestamp"), rather than keeping the first.
+7. **`PUT` is not idempotent for `reviewed`**, which counts again, as the spec defines it.
+8. **A snooze hides a card from the lists only**, not from `GET /feed/:id`, which matches the existing read code.
+
+**Limits:**
+- `docs/setup.md` does not exist, so the new variable is documented only in the `wrangler.toml` comments and the API README.
+- Not run against a deployed Worker, a real Cloudflare Access, or hosted Neon. The private-mode owner path is exercised with a supplied `ctx.access` object, as before.
+- A snooze is tested by moving `snoozed_until` into the past; nothing waits out a real 24 hours.
+- **Unexplained local slowness.** Several of my own verification runs on this Mac stalled or ran long (some produced only the Vitest banner, one tool call timed out). The same commands finished normally when retried, the database and proxy were healthy each time I checked, and the Mac was under load with a recorded wake from deep idle in the window, so the cause is not established. None of it was in a test result that I report; every figure above is from a run that completed. I did not investigate it further.
+- The shared fixture is not reset by these runs except by the database package's own setup; the fixture-size dependence fixed above may exist in other older tests that this run did not happen to trip.
+
 **PHASE 3 CHECKPOINT:** reached only after Tasks 24, 22, and 23 are all done, in that order. All Spec 05 review/publish actions work. Stop for human review before proceeding to Phase 4.
 
-**Checkpoint criteria:**
+**Checkpoint criteria** (self-verification evidence is in the Phase 3 Execution Record; the boxes stay unchecked until the human review at this checkpoint):
 - [ ] PUT /feed/:id/review handles all 6 actions (reviewed, saved, unsaved, snoozed, published, unpublished)
 - [ ] Invalid action returns 400
 - [ ] State transitions verified with PostgreSQL
