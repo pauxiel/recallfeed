@@ -23,6 +23,13 @@ export {
 } from "./queries/feed-items";
 export type { CandidateOptions, NewFeedItem } from "./queries/feed-items";
 
+export {
+  MAX_SNOOZE_HOURS,
+  applyReviewAction,
+  insertReviewEvent,
+  listReviewEventsByFeedItem,
+} from "./queries/review-events";
+
 export { isUuid } from "./queries/rows";
 
 // Test aid: counts driver HTTP requests (Worker subrequests) made by an operation.

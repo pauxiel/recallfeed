@@ -1,4 +1,4 @@
-import type { CardType, FeedItem, Note, NoteMetadata, Source, SourceType } from "@recallfeed/core";
+import type { CardType, FeedItem, Note, NoteMetadata, ReviewAction, ReviewEvent, Source, SourceType } from "@recallfeed/core";
 
 /** A database row as the Neon driver returns it. */
 export type Row = Record<string, unknown>;
@@ -112,5 +112,15 @@ export function toFeedItem(row: Row): FeedItem {
     snoozedUntil: nullableDate(row, "snoozed_until"),
     createdAt: date(row, "created_at"),
     updatedAt: date(row, "updated_at"),
+  };
+}
+
+/** Maps a `review_events` row to the core `ReviewEvent` type. */
+export function toReviewEvent(row: Row): ReviewEvent {
+  return {
+    id: text(row, "id"),
+    feedItemId: text(row, "feed_item_id"),
+    action: text(row, "action") as ReviewAction,
+    createdAt: date(row, "created_at"),
   };
 }
