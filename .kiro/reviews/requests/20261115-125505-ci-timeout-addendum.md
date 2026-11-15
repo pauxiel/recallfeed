@@ -8,7 +8,7 @@
 | Item | Value |
 |---|---|
 | Draft pull request | https://github.com/pauxiel/recallfeed/pull/3 (draft, auto-merge off, private repository) |
-| **Exact revision to review** | `2408d5563ef7d9c6fdb1d5b6a60f1d0c63448550` |
+| **Exact revision to review** | the branch head at submission: the `commit` field of the notification, which also carries this file's own SHA-256. A file cannot name its own commit. The code and records it describes were last changed in `40cc868c443693f09c5566631deb8ea7c7220034`; the hashes in section 4 are of the files at that head. |
 | Workspace | `~/.treehouse/recallfeed-38ad39/2/recallfeed`, branch `fix/ci-integration-test-timeout`, leased |
 | Changed since `94191c3` (reviewed earlier) | comments in two `helpers.ts` files; `tasks/todo.md`; PR #3 description; this addendum |
 | **Unchanged** | application code, every assertion, `DATABASE_TEST_TIMEOUT_MS = 30_000`, coverage thresholds, serial execution, no retries, nothing skipped. In both `helpers.ts` files only comment lines changed. |
@@ -119,9 +119,9 @@ Both are 28 files, 422 tests, 0 skipped, 0 failed, coverage 96.09 / 91.98 / 98.2
 
 ## 4. Integrity
 
-`2408d5563ef7d9c6fdb1d5b6a60f1d0c63448550`:
+At `40cc868c443693f09c5566631deb8ea7c7220034` (the two `helpers.ts` files are identical to those at `2408d55`):
 ```
-7c653c0eb236df12d80bc6a3a166e717aeb2c6334d3211d465ca826868896e34  tasks/todo.md
+c8a092df11808df8b8ee4e78176d470e0e35779ebd32ea5c3f14e910d917ce71  tasks/todo.md
 4fd6277a24d0cb571efe9321d42daa8d33c7668594de1b4d8fb94c0c7d6871eb  packages/api/src/__tests__/helpers.ts
 0bbafb11c6740ba53ddef180d300c429ca35620956abfc9c05aeb68fe6c655de  packages/feed-engine/src/__tests__/helpers.ts
 ```
