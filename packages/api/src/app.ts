@@ -5,6 +5,7 @@ import { requestId } from "./middleware/request-id";
 import { injectPublicRequestFlag } from "./middleware/visibility";
 import { feedRoutes } from "./routes/feed";
 import { importRoutes } from "./routes/import";
+import { reviewRoutes } from "./routes/review";
 import type { AppEnv } from "./types";
 
 /**
@@ -25,6 +26,7 @@ app.use("*", injectPublicRequestFlag);
 
 app.route("/", importRoutes);
 app.route("/", feedRoutes);
+app.route("/", reviewRoutes);
 
 app.notFound((c) => errorResponse(c, 404, "Not found", "NOT_FOUND_ROUTE"));
 app.onError(handleError);
