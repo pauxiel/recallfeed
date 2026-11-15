@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   APP_ORIGIN,
+  DATABASE_TEST_TIMEOUT_MS,
   TEST_API_KEY,
   TEST_OWNER,
   accessContext,
@@ -30,7 +31,7 @@ function jsonPost(body: unknown, headers: Record<string, string> = keyed): Reque
   };
 }
 
-describe.skipIf(databaseUrl === "")("POST /import/markdown (real PostgreSQL through the proxy)", () => {
+describe.skipIf(databaseUrl === "")("POST /import/markdown (real PostgreSQL through the proxy)", { timeout: DATABASE_TEST_TIMEOUT_MS }, () => {
   describe("public deployment, X-API-Key", () => {
     it("imports Markdown and returns exactly Spec 05's four fields", async () => {
       const name = uniqueName("pub");

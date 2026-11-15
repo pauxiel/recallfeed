@@ -7,6 +7,25 @@ import type { AccessExecutionContext, AccessIdentity, Env } from "../types";
 /** The disposable test database URL, or "" when integration tests are skipped. */
 export const databaseUrl = workerEnv.TEST_DATABASE_URL;
 
+/**
+ * Time allowed for one test that talks to the real database through the local proxy.
+ *
+ * What was observed: such a test takes roughly (its database HTTP requests) x (the time one request
+ * takes). The feed test that seeds four cards makes 25 requests. A request took about 80 ms on a
+ * developer machine, and about 116-256 ms on GitHub Actions (estimated from test durations, not timed
+ * per request there). That test took about 2 s locally, 2.9 s in fast CI runs, and 5.0 s in two slow
+ * ones, which reached Vitest's 5 s default. Adding a delay to every request sent to the local proxy
+ * reproduced the timeout, and this larger allowance passed under that condition: the slowest test took
+ * 6.2 s at about 230 ms per request and 10.5 s at about 380 ms per request. Why GitHub's executions
+ * were slower has not been isolated, so this is an allowance for that condition, not a fix for its cause.
+ *
+ * 30 s is about three times the slowest case measured. A Vitest timeout fails a test when it expires;
+ * it does not cancel the test's pending operations, and one local run reported a test that took 207 s
+ * against a 120 s limit. So this bounds how long a test is allowed, not how long it can run. It is
+ * applied to the database-backed suites only, never globally.
+ */
+export const DATABASE_TEST_TIMEOUT_MS = 30_000;
+
 /** Obviously fake credentials for tests. They protect nothing. */
 export const TEST_OWNER = "owner@example.test";
 export const TEST_API_KEY = "test-api-key-not-a-secret-0123456789";
