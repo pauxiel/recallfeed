@@ -136,6 +136,48 @@ function decodeCursor(cursor: string): CursorData {
 
 **Important:** The `sortKey` depends on the resurfacing strategy. For `recency`, it's `lastReviewedAt` or `createdAt`. For `importance`, it might be a computed score.
 
+#### Clarification (Gate 2 Phase 4): complete ordering keys and the cursor shape
+
+*This clarification supersedes the scalar `sortKey` above and the strategy sketches below wherever they differ. It is settled before pagination is implemented, as Task 27 requires.*
+
+**Why the scalar `sortKey` is not enough.** A keyset cursor must carry every key the order sorts by, ending with a unique tie-breaker. Otherwise rows that tie on the leading key are skipped or repeated at a page boundary. `importance` sorts by two keys before `id`, so one scalar cannot hold its position. There is no computed importance score: `importance` ranks by `reviewCount` (Task 26).
+
+**Effective time.** `E(item)` is `lastReviewedAt ?? createdAt`, as whole milliseconds since the Unix epoch, rounded down. In SQL: `floor(EXTRACT(EPOCH FROM COALESCE(last_reviewed_at, created_at)) * 1000)::bigint`. In TypeScript: `(item.lastReviewedAt ?? item.createdAt).getTime()`. These agree for every value, including dates before 1970, because the driver truncates the stored microseconds to milliseconds, which for an instant is the same as rounding down. Milliseconds are used and not PostgreSQL's microseconds because a JavaScript `Date` holds milliseconds. That way the database order, the in-memory `rank()`, and the cursor all agree exactly. Times less than a millisecond apart count as equal and are ordered by `id`.
+
+**The orders.** All keys are ascending, and every order ends with `id`, so each is total and repeatable:
+
+| Strategy | Ordering keys, in order | Meaning |
+|---|---|---|
+| `recency` | `E` ASC, `id` ASC | the card reviewed (or, if never reviewed, created) longest ago first |
+| `importance` | `reviewCount` ASC, `E` ASC, `id` ASC | the least-reviewed card first; among equals, the one reviewed longest ago; then `id` |
+
+`id` is a UUID. PostgreSQL compares UUIDs byte by byte, which is the same order as comparing their canonical lowercase hex strings, so TypeScript sorts `id` with plain string comparison. Both strategies exclude cards whose `snoozedUntil` is later than now, and public requests see only published cards. `due_review` is not implemented in this phase.
+
+**Keyset predicate.** Because every key is ascending, the next page is the rows whose key tuple is strictly greater than the cursor's tuple, using a PostgreSQL row comparison. For `recency` that is `(E, id) > (k1, id)`; for `importance` it is `(review_count, E, id) > (k1, k2, id)`. The database does the ordering and the slicing, so pages never depend on loading every candidate into memory. `rank()` implements the identical order for in-memory use, and a test proves the two agree.
+
+**Cursor shape** (replaces `CursorData` above). The cursor is the unpadded base64url encoding of UTF-8 JSON with exactly these fields:
+
+```json
+{ "v": 1, "s": "importance", "k": [3, 1763600000000], "id": "550e8400-e29b-41d4-a716-446655440000" }
+```
+
+- `v`: format version, always `1`.
+- `s`: the strategy the cursor was issued for.
+- `k`: the key values of the last item on the page, in order, all integers. For `recency` it is `[E]`; for `importance` it is `[reviewCount, E]`.
+- `id`: that item's UUID.
+
+It is encoded with `btoa` and `TextEncoder`, since `Buffer` does not exist in Workers.
+
+**Validation.** Anything else is `400 VALIDATION_CURSOR`, and the cursor is never echoed. That includes a cursor longer than 512 characters, one that is not base64url, not JSON, has missing or extra fields, a different `v`, a non-integer or out-of-range key, or an `id` that is not a UUID. A cursor issued for a different strategy than the deployment's current one is also refused: its keys mean something else.
+
+**`nextCursor`.** A page fetches `limit + 1` rows. If that extra row exists, `nextCursor` is the cursor of the last returned item; otherwise it is `null`.
+
+**Behavior while the data changes.** The cursor carries values, not a reference to a row, so it still works if its card is later deleted, unpublished or snoozed. A review only ever increases a card's keys (`last_reviewed_at` becomes now and `review_count` goes up), so a card reviewed while a client is paging is never skipped. It may appear again on a later page.
+
+**Privacy note.** The cursor carries the last item's `reviewCount` (for `importance`) and effective time (for both). Public responses omit `reviewCount` and `lastReviewedAt`, and a public cursor reveals them for one item per page. Whether to protect this, for example by encrypting cursors, is an open decision recorded in the Phase 4 handoff.
+
+**Strategy selection.** `DEFAULT_RESURFACING_STRATEGY` chooses the strategy. Unset or blank means `recency`, which keeps the Phase 2 order. `importance` is the other accepted value. Any other value, including `due_review`, is a configuration error that makes `GET /feed` return a generic 500.
+
 ### 3. Review Recording
 
 When `recordReview(feedItemId, action)` is called:
