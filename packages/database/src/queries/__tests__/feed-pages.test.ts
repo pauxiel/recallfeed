@@ -6,7 +6,7 @@ import { toFeedItem } from "../rows";
 import type { CandidateOrder, CandidatePosition } from "../feed-items";
 import { upsertNotes } from "../notes";
 import { upsertSource } from "../sources";
-import { databaseUrl, makeNote, testDb, uniqueName } from "./helpers";
+import { DATABASE_TEST_TIMEOUT_MS, databaseUrl, makeNote, testDb, uniqueName } from "./helpers";
 
 const LOWEST_ID = "00000000-0000-0000-0000-000000000000";
 
@@ -92,7 +92,7 @@ async function walk(order: CandidateOrder, limit: number, start: CandidatePositi
   return { seen, pages };
 }
 
-describe.skipIf(databaseUrl === "")("feed pages in a strategy's order (real PostgreSQL through the proxy)", () => {
+describe.skipIf(databaseUrl === "")("feed pages in a strategy's order (real PostgreSQL through the proxy)", { timeout: DATABASE_TEST_TIMEOUT_MS }, () => {
   describe("ordering", () => {
     it("recency is effective time then id, with ties to the millisecond broken by id", async () => {
       // Two exact ties, two that differ only by microseconds inside one millisecond, one a millisecond later,

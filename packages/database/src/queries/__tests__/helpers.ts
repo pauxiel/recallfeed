@@ -7,6 +7,18 @@ import { configureLocalNeonHttp } from "../../local-proxy";
 /** The disposable test database URL, or "" when integration tests are skipped. */
 export const databaseUrl = env.TEST_DATABASE_URL;
 
+/**
+ * Time allowed for one test that talks to the real database through the local proxy, the same
+ * allowance the api and feed-engine suites use. Such a test takes roughly (its database requests) x
+ * (the time one request takes). The keyset walk tests in `feed-pages.test.ts` make one request per page:
+ * they took 1.5-2.5 s locally and 3.8-5.0 s on GitHub Actions, where four reached Vitest's 5 s default
+ * (CI run 44801076724). Why GitHub's executions are slower has not been isolated, so this is an
+ * allowance for that condition, not a fix for its cause. See DATABASE_TEST_TIMEOUT_MS in the api
+ * package's test helpers for the measurements, and for what a Vitest timeout does and does not do.
+ * Applied to database-backed suites only, never globally.
+ */
+export const DATABASE_TEST_TIMEOUT_MS = 30_000;
+
 /** A client for the test database, with local-proxy routing applied. */
 export function testDb(): DbClient {
   configureLocalNeonHttp(databaseUrl);
