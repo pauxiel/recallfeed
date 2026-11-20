@@ -70,6 +70,16 @@ export async function insertFeedItem(db: DbClient, item: NewFeedItem): Promise<F
   return created ?? null;
 }
 
+/** The orders the feed can be read in (the Spec 04 clarification). `due_review` is not implemented. */
+export type CandidateOrder = "recency" | "importance";
+
+/**
+ * A keyset position: the ordering keys and `id` of the last card of the previous page. The next page
+ * starts strictly after it. `keys` has one integer for recency (effective time in milliseconds) and
+ * two for importance (`reviewCount`, then effective time).
+ */
+export type CandidatePosition = { keys: readonly number[]; id: string };
+
 /** Filters for {@link getFeedItemCandidates}. */
 export type CandidateOptions = {
   /** Only these card types. Omit for all types. */
@@ -80,21 +90,57 @@ export type CandidateOptions = {
   excludeSnoozed?: boolean;
   /** Page size, 1 to {@link MAX_CANDIDATE_LIMIT}. */
   limit: number;
+  /** The order. Defaults to `recency`, the order the feed has used since Phase 2. */
+  order?: CandidateOrder;
+  /** Return only cards that come strictly after this position in `order`. */
+  after?: CandidatePosition;
 };
 
 /**
- * Lists cards for the intermediate feed.
+ * The effective time of a row in whole milliseconds, rounded down. TypeScript's
+ * `(lastReviewedAt ?? createdAt).getTime()` gives the same value for every row (Spec 04 clarification).
+ */
+const EFFECTIVE_MS = "floor(EXTRACT(EPOCH FROM COALESCE(last_reviewed_at, created_at)) * 1000)::bigint";
+
+/**
+ * Each order's key expressions, in order, before the final `id`. These are fixed SQL fragments: no
+ * request data ever becomes SQL text, and the cursor's values are bound as parameters.
+ */
+const ORDER_KEYS: Record<CandidateOrder, readonly { sql: string; type: "bigint" | "int"; min: number; max: number }[]> = {
+  recency: [{ sql: EFFECTIVE_MS, type: "bigint", min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER }],
+  importance: [
+    // review_count is a 32-bit integer and never negative.
+    { sql: "review_count", type: "int", min: 0, max: 2147483647 },
+    { sql: EFFECTIVE_MS, type: "bigint", min: Number.MIN_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER },
+  ],
+};
+
+function assertPosition(order: CandidateOrder, after: CandidatePosition): void {
+  const keys = ORDER_KEYS[order];
+  const expected = keys.length;
+  if (
+    after.keys.length !== expected ||
+    !after.keys.every((key, i) => Number.isSafeInteger(key) && key >= (keys[i]?.min ?? 0) && key <= (keys[i]?.max ?? 0)) ||
+    !isUuid(after.id)
+  ) {
+    throw new ValidationError(`A ${order} position needs ${expected} integer keys and a UUID`, "VALIDATION_CURSOR");
+  }
+}
+
+/**
+ * Lists cards in a strategy's order, one keyset page at a time.
  *
- * Order is fixed and total: oldest effective review time first
- * (`COALESCE(last_reviewed_at, created_at)`), then `id`. This is the recency order of Spec 04
- * and exists so the same data always returns the same page. It is not strategy selection, and
- * there is no cursor: `afterId` and `afterSortKey` are deliberately absent until Task 27 settles
- * the cursor shape for multi-key orderings.
+ * `recency` orders by effective time (`lastReviewedAt ?? createdAt`, whole milliseconds) then `id`;
+ * `importance` by `review_count`, then effective time, then `id`. All ascending, so each order is
+ * total and repeatable. With `after`, only cards whose key tuple is strictly greater than the given
+ * position are returned, using a row comparison, so a page boundary never skips or repeats a card
+ * even when many cards tie on the leading keys.
  *
  * @param db - A request-scoped client from `createDb`.
- * @param options - Filters and page size.
- * @returns Up to `limit` cards.
- * @throws ValidationError if `limit` is not an integer from 1 to {@link MAX_CANDIDATE_LIMIT}.
+ * @param options - Filters, page size, order and position.
+ * @returns Up to `limit` cards, in order.
+ * @throws ValidationError if `limit` is not an integer from 1 to {@link MAX_CANDIDATE_LIMIT}, or
+ * `after` does not fit the order.
  */
 export async function getFeedItemCandidates(db: DbClient, options: CandidateOptions): Promise<FeedItem[]> {
   const { limit } = options;
@@ -103,6 +149,11 @@ export async function getFeedItemCandidates(db: DbClient, options: CandidateOpti
       `limit must be an integer from 1 to ${MAX_CANDIDATE_LIMIT}`,
       "VALIDATION_LIMIT",
     );
+  }
+  const order = options.order ?? "recency";
+  const keys = ORDER_KEYS[order];
+  if (keys === undefined) {
+    throw new ValidationError("Unknown feed order", "VALIDATION_STRATEGY");
   }
   const conditions: string[] = [];
   const params: unknown[] = [];
@@ -116,12 +167,23 @@ export async function getFeedItemCandidates(db: DbClient, options: CandidateOpti
   if (options.excludeSnoozed === true) {
     conditions.push("(snoozed_until IS NULL OR snoozed_until <= NOW())");
   }
+  if (options.after !== undefined) {
+    assertPosition(order, options.after);
+    const placeholders = options.after.keys.map((value, i) => {
+      params.push(String(value));
+      return `$${params.length}::${keys[i]?.type ?? "bigint"}`;
+    });
+    params.push(options.after.id);
+    placeholders.push(`$${params.length}::uuid`);
+    conditions.push(`(${[...keys.map((key) => key.sql), "id"].join(", ")}) > (${placeholders.join(", ")})`);
+  }
   params.push(limit);
   const where = conditions.length === 0 ? "" : `WHERE ${conditions.join(" AND ")}`;
+  const orderBy = [...keys.map((key) => `${key.sql} ASC`), "id ASC"].join(", ");
   const rows = await db.query(
     `SELECT * FROM feed_items
       ${where}
-      ORDER BY COALESCE(last_reviewed_at, created_at) ASC, id ASC
+      ORDER BY ${orderBy}
       LIMIT $${params.length}`,
     params,
   );

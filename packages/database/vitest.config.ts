@@ -19,6 +19,9 @@ export default defineConfig({
   ],
   test: {
     name: "database",
+    // Every package shares one database, and some tests seed cards that change the order other tests
+    // read. Test files run one at a time so they never interleave, as in the api and feed-engine packages.
+    fileParallelism: false,
     include: ["src/**/*.test.ts"],
     // Files named *.node.test.ts run in plain Node under vitest.node.config.ts.
     exclude: [...configDefaults.exclude, "src/**/*.node.test.ts"],
