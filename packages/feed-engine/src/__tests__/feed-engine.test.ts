@@ -1,7 +1,8 @@
-import { ValidationError } from "@recallfeed/core";
+import { NotFoundError, ValidationError } from "@recallfeed/core";
+import type { ReviewAction } from "@recallfeed/core";
 import { describe, expect, it } from "vitest";
 import { generateFeedItems } from "../card-generator";
-import { DEFAULT_FEED_LIMIT, FeedEngine, MAX_FEED_LIMIT } from "../feed-engine";
+import { DEFAULT_FEED_LIMIT, DEFAULT_SNOOZE_HOURS, FeedEngine, MAX_FEED_LIMIT } from "../feed-engine";
 import { DATABASE_TEST_TIMEOUT_MS, countHttpRequests, databaseUrl, testDb, uniqueName } from "./helpers";
 
 describe.skipIf(databaseUrl === "")("FeedEngine (real PostgreSQL through the proxy)", { timeout: DATABASE_TEST_TIMEOUT_MS }, () => {
@@ -274,6 +275,93 @@ describe.skipIf(databaseUrl === "")("FeedEngine (real PostgreSQL through the pro
       for (const limit of [0, -1, 51, 1.5, Number.NaN]) {
         await expect(engine.listFeedItems({ isPublicRequest: false, limit })).rejects.toBeInstanceOf(ValidationError);
       }
+    });
+  });
+
+  describe("recordReview", () => {
+    async function oneCard() {
+      const db = testDb();
+      const name = uniqueName("review");
+      const engine = new FeedEngine(db);
+      const result = await engine.importMarkdown(`# Only ${name}\n\nBody for ${name}.`, { name });
+      const cards = await db.query("SELECT id FROM feed_items WHERE source_id = $1", [result.sourceId]);
+      return { db, engine, id: cards[0]?.id as string };
+    }
+    const eventsFor = async (db: ReturnType<typeof testDb>, id: string): Promise<string[]> =>
+      (await db.query("SELECT action FROM review_events WHERE feed_item_id = $1 ORDER BY created_at, id", [id])).map(
+        (row) => row.action as string,
+      );
+
+    it("returns the updated card and logs the action", async () => {
+      const { db, engine, id } = await oneCard();
+
+      const reviewed = await engine.recordReview(id, "reviewed", { snoozeHours: DEFAULT_SNOOZE_HOURS });
+      const published = await engine.recordReview(id, "published", { snoozeHours: DEFAULT_SNOOZE_HOURS });
+
+      expect(reviewed).toMatchObject({ id, reviewCount: 1, isPublished: false });
+      expect(published).toMatchObject({ id, reviewCount: 1, isPublished: true });
+      expect(await eventsFor(db, id)).toEqual(["reviewed", "published"]);
+    });
+
+    it("a snooze lasts the number of hours it is given", async () => {
+      const { db, engine, id } = await oneCard();
+
+      const snoozed = await engine.recordReview(id, "snoozed", { snoozeHours: 6 });
+      const [row] = await db.query("SELECT created_at FROM review_events WHERE feed_item_id = $1", [id]);
+
+      expect(snoozed.snoozedUntil!.getTime() - (row!.created_at as Date).getTime()).toBe(6 * 60 * 60 * 1000);
+    });
+
+    it("the default snooze is 24 hours (Spec 04)", () => {
+      expect(DEFAULT_SNOOZE_HOURS).toBe(24);
+    });
+
+    it("an unknown card is a NotFoundError and nothing is logged", async () => {
+      const { db, engine } = await oneCard();
+      const missing = "00000000-0000-4000-8000-000000000000";
+
+      const failure = await engine.recordReview(missing, "reviewed", { snoozeHours: 24 }).catch((e: unknown) => e);
+
+      expect(failure).toBeInstanceOf(NotFoundError);
+      expect((failure as NotFoundError).code).toBe("NOT_FOUND_FEED_ITEM");
+      expect(await eventsFor(db, missing)).toEqual([]);
+    });
+
+    it("a malformed ID is a NotFoundError, not a database error", async () => {
+      const { engine } = await oneCard();
+
+      await expect(engine.recordReview("not-a-uuid", "reviewed", { snoozeHours: 24 })).rejects.toBeInstanceOf(NotFoundError);
+      await expect(engine.recordReview("1; DROP TABLE feed_items", "saved", { snoozeHours: 24 })).rejects.toBeInstanceOf(NotFoundError);
+    });
+
+    it.each(["invalid", "", "Reviewed", "PUBLISH", "reviewed'; DROP TABLE review_events; --"])(
+      "an unapproved action %j is a ValidationError, and the card and the log are unchanged",
+      async (action) => {
+        const { db, engine, id } = await oneCard();
+
+        await expect(engine.recordReview(id, action as ReviewAction, { snoozeHours: 24 })).rejects.toMatchObject({
+          code: "VALIDATION_REVIEW_ACTION",
+        });
+        expect(await eventsFor(db, id)).toEqual([]);
+        expect((await db.query("SELECT review_count FROM feed_items WHERE id = $1", [id]))[0]?.review_count).toBe(0);
+      },
+    );
+
+    it("an unknown action is refused even for an unknown card: validation comes before the lookup", async () => {
+      const { engine } = await oneCard();
+
+      await expect(
+        engine.recordReview("00000000-0000-4000-8000-000000000000", "nope" as ReviewAction, { snoozeHours: 24 }),
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it("an unusable snooze length is a ValidationError for snoozed only", async () => {
+      const { engine, id } = await oneCard();
+
+      await expect(engine.recordReview(id, "snoozed", { snoozeHours: 0 })).rejects.toMatchObject({
+        code: "VALIDATION_SNOOZE_HOURS",
+      });
+      await expect(engine.recordReview(id, "saved", { snoozeHours: 0 })).resolves.toMatchObject({ id });
     });
   });
 });

@@ -6,6 +6,10 @@
 #   DATABASE_URL      secret  Neon connection string. Required.
 #   OWNER_EMAIL       var or secret  Private mode: the only email allowed to use the API. Required if private.
 #   API_SECRET_KEY    secret  Public mode: the key writes must send in X-API-Key. Required if public.
+#   SNOOZE_DEFAULT_HOURS  var  Optional. How many hours a `snoozed` review action hides a card: a whole
+#                     number from 1 to 8760. Unset means 24. A value that is set but unusable (for example
+#                     "abc", "0" or "1.5") makes only the `snoozed` action fail with a generic 500. It is a
+#                     plain var, not a secret, so a deployment can set it under [vars] below.
 #
 # FEED_VISIBILITY below is the default and fails closed: anything other than the exact value "public"
 # means private. A deployment chooses its mode by overriding this var, not by changing code.

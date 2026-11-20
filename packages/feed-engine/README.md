@@ -6,8 +6,8 @@ HTTP, authentication, or any application. Specification: [`.kiro/specs/04-feed-e
 
 ## Scope (Gate 2, Phase 2)
 
-Built: Markdown import, original-card creation, and intermediate feed reads. Not built, and not claimed:
-review actions, resurfacing strategies, cursor pagination, the Notion import, and AI or queued work.
+Built: Markdown import, original-card creation, intermediate feed reads, and review actions (Phase 3). Not
+built, and not claimed: resurfacing strategies, cursor pagination, the Notion import, and AI or queued work.
 Those are later phases, so `FeedEngine` does not implement core's whole `IFeedEngine`.
 
 ## Public API
@@ -18,6 +18,8 @@ Those are later phases, so `FeedEngine` does not implement core's whole `IFeedEn
 | `FeedEngine.importMarkdown(content, { name? })` | Validates, upserts the source, parses, stores notes, creates cards. Returns `{ sourceId, queued, notesImported, feedItemsCreated }` (Spec 05). |
 | `FeedEngine.listFeedItems({ limit?, isPublicRequest })` | Up to 50 cards, default 10. Public requests see published cards only. Snoozed cards are hidden from everyone. |
 | `FeedEngine.getFeedItem(id, { isPublicRequest })` | One card, or null. A public request cannot see an unpublished card. |
+| `FeedEngine.recordReview(id, action, { snoozeHours })` | Applies one of the six review actions and logs it in one statement. Returns the updated card. Throws `ValidationError` for an unknown action or unusable `snoozeHours`, `NotFoundError` (`NOT_FOUND_FEED_ITEM`) for an unknown card. Authorization is the caller's job. |
+| `DEFAULT_SNOOZE_HOURS` | 24 (Spec 04). |
 | `generateFeedItems(db, sourceId, cardTypes)` | Creates the missing cards. Only `original` is supported; other types throw instead of being skipped. |
 | `assertValidImport(content, name?)` | The input checks, also usable by an API layer. |
 

@@ -17,9 +17,10 @@ Everything is exported from `src/index.ts`.
 | Interfaces | `IConnector`, `IResurfacingStrategy`, `IAIProvider`, `IFeedEngine` |
 | Supporting types | `ConnectorCredentials`, `ConnectorValidationResult`, `AIOptions`, `GetFeedOptions`, `FeedPage`, `ImportResult` |
 | Errors | `RecallFeedError`, `ConnectorError`, `ValidationError`, `NotFoundError`, `AuthorizationError`, `RateLimitError` |
+| Review actions | `REVIEW_ACTIONS` (the six names as a runtime list), `isReviewAction(value)`, `AllReviewActionsListed` (a compile-time check that the list and the `ReviewAction` type agree) |
 
-The only runtime code is the error classes in `src/errors.ts`. Types and
-interfaces are erased at compile time.
+The only runtime code is the error classes in `src/errors.ts` and the review-action list in
+`src/review-actions.ts`. Types and interfaces are erased at compile time.
 
 ## Constraints
 

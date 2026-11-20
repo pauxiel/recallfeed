@@ -1,8 +1,9 @@
-import { ValidationError } from "@recallfeed/core";
-import type { FeedItem, ImportResult } from "@recallfeed/core";
+import { NotFoundError, ValidationError, isReviewAction } from "@recallfeed/core";
+import type { FeedItem, ImportResult, ReviewAction } from "@recallfeed/core";
 import { connectorRegistry } from "@recallfeed/connectors";
 import {
   MAX_CANDIDATE_LIMIT,
+  applyReviewAction,
   getFeedItemById,
   getFeedItemCandidates,
   updateSourceSyncedAt,
@@ -18,6 +19,9 @@ export const MAX_FEED_LIMIT = 50;
 
 /** The page size when a request does not give one (Spec 05 and Task 20). */
 export const DEFAULT_FEED_LIMIT = 10;
+
+/** How long a `snoozed` action hides a card when the deployment does not say otherwise (Spec 04). */
+export const DEFAULT_SNOOZE_HOURS = 24;
 
 /**
  * What a Markdown import returns. It is Spec 05's response: core's `ImportResult` plus the
@@ -42,11 +46,11 @@ export type ListFeedOptions = {
 };
 
 /**
- * Coordinates Markdown import and the intermediate feed reads.
+ * Coordinates Markdown import, the intermediate feed reads, and review actions.
  *
  * This is a request-scoped object: build one per request from `createDb(env.DATABASE_URL)`. It
- * implements the `importMarkdown` part of core's `IFeedEngine`. The review, Notion, and strategy
- * based `getFeed` methods arrive in later phases, and no AI or queue is involved here.
+ * implements the `importMarkdown` and `recordReview` parts of core's `IFeedEngine`. The Notion and
+ * strategy based `getFeed` methods arrive in later phases, and no AI or queue is involved here.
  */
 export class FeedEngine {
   constructor(private readonly db: DbClient) {}
@@ -109,5 +113,32 @@ export class FeedEngine {
    */
   async getFeedItem(id: string, options: { isPublicRequest: boolean }): Promise<FeedItem | null> {
     return getFeedItemById(this.db, id, { onlyPublished: options.isPublicRequest });
+  }
+
+  /**
+   * Records a review action on a card: changes the card and logs the event in one statement.
+   *
+   * `reviewed` counts a review, `saved` and `unsaved` set and clear the saved time, `snoozed` hides the
+   * card from every feed for `snoozeHours`, and `published` and `unpublished` control whether anonymous
+   * visitors can see it. Repeating an action is allowed and logged again. Authorization is the
+   * caller's job: this method trusts that the request was already allowed to write.
+   *
+   * @param feedItemId - The card's UUID. A malformed ID is simply not found.
+   * @param action - One of the six approved actions, matched exactly.
+   * @param options - `snoozeHours` is the snooze length, a whole number from 1 to 8760. Only `snoozed`
+   * uses it.
+   * @returns The updated card.
+   * @throws ValidationError for an unknown action, or an unusable `snoozeHours` with `snoozed`.
+   * @throws NotFoundError if there is no such card. Nothing is changed or logged in that case.
+   */
+  async recordReview(feedItemId: string, action: ReviewAction, options: { snoozeHours: number }): Promise<FeedItem> {
+    if (!isReviewAction(action)) {
+      throw new ValidationError("Unknown review action", "VALIDATION_REVIEW_ACTION");
+    }
+    const updated = await applyReviewAction(this.db, feedItemId, action, options);
+    if (updated === null) {
+      throw new NotFoundError("Feed item not found", "NOT_FOUND_FEED_ITEM");
+    }
+    return updated;
   }
 }

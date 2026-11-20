@@ -13,6 +13,11 @@ export type Env = {
   OWNER_EMAIL?: string;
   /** Public mode: the key writes must present in `X-API-Key`. Required for writes in public mode. */
   API_SECRET_KEY?: string;
+  /**
+   * How many hours a `snoozed` review action hides a card. A whole number from 1 to 8760; unset means
+   * 24 (Spec 04). A set but unusable value makes the review endpoint fail with a generic 500.
+   */
+  SNOOZE_DEFAULT_HOURS?: string;
 };
 
 /** Visibility of the deployment. */
