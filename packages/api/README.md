@@ -8,8 +8,8 @@ name. Specification: [`.kiro/specs/05-authentication.md`](../../.kiro/specs/05-a
 
 Built: `POST /import/markdown`, `GET /feed`, `GET /feed/:id`, `PUT /feed/:id/review` (all six review and
 publish actions), authorization, CSRF and cache policy, and the public response filter. Not built, and not
-claimed: resurfacing strategies, cursor pagination, the Notion import, Inngest, and AI. `GET /feed` returns one page in a fixed order
-(`COALESCE(last_reviewed_at, created_at)`, then `id`), and `?cursor=` is a 400, not ignored.
+claimed: the `due_review` strategy, the Notion import, Inngest, and AI. `GET /feed` returns
+`{ items, nextCursor }` in the order `DEFAULT_RESURFACING_STRATEGY` chooses, one keyset page at a time.
 
 ## Environment
 
@@ -19,6 +19,7 @@ claimed: resurfacing strategies, cursor pagination, the Notion import, Inngest, 
 | `FEED_VISIBILITY` | var | Exactly `public` makes the deployment public. Anything else, including unset, is private. |
 | `OWNER_EMAIL` | var or secret | Private mode: the only identity allowed. Compared case-insensitively and exactly. |
 | `API_SECRET_KEY` | secret | Public mode: the key a write must send in `X-API-Key`. |
+| `DEFAULT_RESURFACING_STRATEGY` | var, optional | The order of `GET /feed`: `recency` (unset or blank means this) or `importance`. Any other value, including `due_review`, makes `GET /feed` fail with a generic 500. |
 | `SNOOZE_DEFAULT_HOURS` | var, optional | Hours a `snoozed` action hides a card: a whole number from 1 to 8760. Unset means 24. A set but unusable value makes `snoozed` (only) fail with a generic 500. |
 
 ## Routes
@@ -46,9 +47,31 @@ does. An unknown action is `400 VALIDATION_REVIEW_ACTION`; an unknown or malform
 `404 NOT_FOUND_FEED_ITEM`. Repeating an action is allowed and logged again, so a repeated `reviewed` counts
 again and the endpoint is not idempotent for that action. There is no separate publish endpoint.
 
+`GET /feed` pages with a cursor. Read the first page with `GET /feed?limit=10`, then pass each response's
+`nextCursor` back as `?cursor=` until it is `null`. `limit` is 1 to 50 (default 10). The order is total, so
+every card appears once while paging, even when many tie:
+
+| Strategy | Order |
+|---|---|
+| `recency` (default) | effective time ascending (`lastReviewedAt ?? createdAt`, in milliseconds), then `id` |
+| `importance` | `reviewCount` ascending, then effective time, then `id` |
+
+The cursor is opaque: do not parse it, build it, or rely on its format. It is unpadded base64url of
+`{"v":1,"s":<strategy>,"k":[<keys>],"id":<uuid>}` (Spec 04 clarification). A malformed cursor, or one issued
+under a different strategy, is `400 VALIDATION_CURSOR`. A card reviewed while you page is never skipped, but
+may appear again later.
+
+**Public cursors disclose review data (accepted).** The cursor is not encrypted, so anyone can decode it. On
+each page that has a `nextCursor`, it reveals two values for the last card on the page. One is the card's effective
+time (`lastReviewedAt ?? createdAt`, in milliseconds), under both strategies. Because `createdAt` is public,
+this shows whether and when the card was last reviewed. The other is the card's `reviewCount`, under
+`importance` only. Public card responses omit `reviewCount` and `lastReviewedAt`, but this disclosure is a
+deliberate, accepted trade-off, and the pagination contract does not change because of it. The cursor carries no
+other card data. A forged cursor only moves where a page starts and cannot reach unpublished cards.
+
 Errors are `{ error, code }`. Notable codes: `AUTH_API_KEY_MISSING` (401), `AUTH_API_KEY_INVALID` (403),
 `CSRF_ORIGIN_MISMATCH` and `CSRF_ORIGIN_MISSING` (403), `VALIDATION_SIZE`, `VALIDATION_LIMIT`,
-`VALIDATION_CURSOR_UNSUPPORTED`, `VALIDATION_CONTENT_TYPE` (400), and `NOT_FOUND_FEED_ITEM` (404).
+`VALIDATION_CURSOR`, `VALIDATION_CONTENT_TYPE` (400), and `NOT_FOUND_FEED_ITEM` (404).
 A public request gets the same 404 for a missing, malformed, and unpublished ID.
 
 ## Behaviors worth knowing
@@ -87,8 +110,7 @@ curl -X POST http://127.0.0.1:8787/import/markdown \
   -d '{"name":"demo","content":"# Title\n\nSome text worth remembering."}'
 ```
 
-Imported cards are unpublished. There is no publish endpoint yet, so a public `GET /feed` shows a card only
-after `is_published` is set in the database.
+Imported cards are unpublished. A public `GET /feed` shows a card only after the `published` review action.
 
 ## Tests
 

@@ -6,9 +6,10 @@ HTTP, authentication, or any application. Specification: [`.kiro/specs/04-feed-e
 
 ## Scope (Gate 2, Phase 2)
 
-Built: Markdown import, original-card creation, intermediate feed reads, and review actions (Phase 3). Not
-built, and not claimed: resurfacing strategies, cursor pagination, the Notion import, and AI or queued work.
-Those are later phases, so `FeedEngine` does not implement core's whole `IFeedEngine`.
+Built: Markdown import, original-card creation, review actions (Phase 3), the recency and importance
+strategies with keyset cursor pagination, and the highlight card generator (Phase 4). Not built, and not
+claimed: the `due_review` strategy, the Notion import, and AI or queued work. `FeedEngine` therefore does not
+implement core's whole `IFeedEngine`.
 
 ## Public API
 
@@ -16,11 +17,14 @@ Those are later phases, so `FeedEngine` does not implement core's whole `IFeedEn
 |---|---|
 | `FeedEngine` | Request-scoped. Build one per request: `new FeedEngine(createDb(env.DATABASE_URL))`. |
 | `FeedEngine.importMarkdown(content, { name? })` | Validates, upserts the source, parses, stores notes, creates cards. Returns `{ sourceId, queued, notesImported, feedItemsCreated }` (Spec 05). |
-| `FeedEngine.listFeedItems({ limit?, isPublicRequest })` | Up to 50 cards, default 10. Public requests see published cards only. Snoozed cards are hidden from everyone. |
+| `FeedEngine.listFeedItems({ limit?, isPublicRequest, strategy?, cursor? })` | One keyset page, `{ items, nextCursor }`: up to 50 cards, default 10, in `recency` (default) or `importance` order. Public requests see published cards only; snoozed cards are hidden from everyone. `nextCursor` is null on the last page. Throws `VALIDATION_LIMIT`, `VALIDATION_STRATEGY` or `VALIDATION_CURSOR`. |
+| `RecencyStrategy`, `ImportanceStrategy`, `getStrategy(name)`, `DEFAULT_STRATEGY` | The two strategies (core's `IResurfacingStrategy` plus their integer `keys`). Order: recency is effective time then `id`; importance is `reviewCount`, effective time, then `id`. |
+| `encodeCursor(strategy, item)`, `decodeCursor(cursor, strategy)`, `MAX_CURSOR_LENGTH` | The cursor format of the Spec 04 clarification, strict on decode. Opaque but not encrypted: a public cursor discloses the last card's effective time and, under `importance`, its `reviewCount` (accepted; see the Spec 04 clarification). |
 | `FeedEngine.getFeedItem(id, { isPublicRequest })` | One card, or null. A public request cannot see an unpublished card. |
 | `FeedEngine.recordReview(id, action, { snoozeHours })` | Applies one of the six review actions and logs it in one statement. Returns the updated card. Throws `ValidationError` for an unknown action or unusable `snoozeHours`, `NotFoundError` (`NOT_FOUND_FEED_ITEM`) for an unknown card. Authorization is the caller's job. |
 | `DEFAULT_SNOOZE_HOURS` | 24 (Spec 04). |
-| `generateFeedItems(db, sourceId, cardTypes)` | Creates the missing cards. Only `original` is supported; other types throw instead of being skipped. |
+| `generateFeedItems(db, sourceId, cardTypes)` | Creates the missing cards of `original` or `highlight`. Other types throw instead of being skipped. A note with nothing to highlight gets no highlight card. |
+| `generateHighlightCard(note)`, `extractHighlight(content)` | The highlight rule: the first blockquote; otherwise every `**strong**`, `__strong__`, `*em*` and `_em_` span in order; otherwise none. Code is never a highlight. |
 | `assertValidImport(content, name?)` | The input checks, also usable by an API layer. |
 
 ## How an import behaves

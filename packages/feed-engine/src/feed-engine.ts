@@ -12,6 +12,8 @@ import {
 } from "@recallfeed/database";
 import type { DbClient } from "@recallfeed/database";
 import { generateFeedItems } from "./card-generator";
+import { decodeCursor, encodeCursor } from "./cursor";
+import { DEFAULT_STRATEGY, getStrategy } from "./strategies";
 import { assertValidImport } from "./validation";
 
 /** The most cards one intermediate feed request returns (Spec 05). */
@@ -43,6 +45,17 @@ export type ListFeedOptions = {
   limit?: number;
   /** True restricts the result to published cards (public requests). */
   isPublicRequest: boolean;
+  /** `recency` or `importance`. Defaults to `recency`, the Phase 2 order. */
+  strategy?: string;
+  /** The `nextCursor` of the previous page. Omit for the first page. */
+  cursor?: string;
+};
+
+/** One page of the feed. */
+export type FeedItemsPage = {
+  items: FeedItem[];
+  /** Pass this as `cursor` to read the next page; null when there are no more cards. */
+  nextCursor: string | null;
 };
 
 /**
@@ -82,26 +95,38 @@ export class FeedEngine {
   }
 
   /**
-   * Lists cards for the intermediate feed.
+   * Reads one page of the feed in a strategy's order (Spec 04 clarification).
    *
-   * Cards hidden by a snooze are excluded for everyone, and a public request sees published cards
-   * only. The order is fixed and there is no cursor: cursor pagination is Phase 4 work, so this is
-   * deliberately narrower than core's `IFeedEngine.getFeed`.
+   * `recency` orders by effective time then `id`; `importance` by `reviewCount`, effective time, then
+   * `id`. Cards hidden by a snooze are excluded for everyone, and a public request sees published
+   * cards only. The database orders and slices the page, and the cursor carries every ordering key
+   * plus `id`, so walking the pages returns each card once even when many tie. It reads `limit + 1`
+   * rows to know whether another page exists. This is narrower than core's `IFeedEngine.getFeed`: it
+   * takes a strategy name, not a whole `FeedConfig`, and returns no `total`.
    *
-   * @param options - Page size and whether the request is public.
-   * @returns Up to `limit` cards.
-   * @throws ValidationError if `limit` is not an integer from 1 to {@link MAX_FEED_LIMIT}.
+   * @param options - Page size, public flag, strategy and cursor.
+   * @returns The page and the cursor for the next one, or `nextCursor: null` at the end.
+   * @throws ValidationError `VALIDATION_LIMIT` for a bad limit, `VALIDATION_STRATEGY` for an unknown
+   * strategy, `VALIDATION_CURSOR` for a cursor that is malformed or was issued for another strategy.
    */
-  async listFeedItems(options: ListFeedOptions): Promise<FeedItem[]> {
+  async listFeedItems(options: ListFeedOptions): Promise<FeedItemsPage> {
     const limit = options.limit ?? DEFAULT_FEED_LIMIT;
-    if (!Number.isInteger(limit) || limit < 1 || limit > MAX_FEED_LIMIT || limit > MAX_CANDIDATE_LIMIT) {
+    if (!Number.isInteger(limit) || limit < 1 || limit > MAX_FEED_LIMIT || limit + 1 > MAX_CANDIDATE_LIMIT) {
       throw new ValidationError(`limit must be an integer from 1 to ${MAX_FEED_LIMIT}`, "VALIDATION_LIMIT");
     }
-    return getFeedItemCandidates(this.db, {
+    const strategy = getStrategy(options.strategy ?? DEFAULT_STRATEGY);
+    const after = options.cursor === undefined ? undefined : decodeCursor(options.cursor, strategy);
+    const rows = await getFeedItemCandidates(this.db, {
       onlyPublished: options.isPublicRequest,
       excludeSnoozed: true,
-      limit,
+      order: strategy.name,
+      limit: limit + 1,
+      ...(after === undefined ? {} : { after }),
     });
+    const items = rows.slice(0, limit);
+    const last = items[items.length - 1];
+    const nextCursor = rows.length > limit && last !== undefined ? encodeCursor(strategy, last) : null;
+    return { items, nextCursor };
   }
 
   /**

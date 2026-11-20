@@ -5,6 +5,7 @@ import { getDb } from "../db";
 import { errorResponse } from "../middleware/errors";
 import { requireReadAccess } from "../middleware/auth";
 import { sanitizeFeedItem } from "../middleware/response-filter";
+import { getStrategyName } from "../strategy-config";
 import type { AppEnv } from "../types";
 
 /**
@@ -26,25 +27,30 @@ function parseLimit(raw: string | undefined): number {
 }
 
 /**
- * The intermediate feed reads (Tasks 20 and 21): `GET /feed` and `GET /feed/:id`.
+ * The feed reads: `GET /feed` (Tasks 20 and 27) and `GET /feed/:id` (Task 21).
  *
- * `GET /feed` returns `{ items }` with no cursor. Cursor pagination and strategy ordering are
- * Phase 4 work, and the `cursor` query parameter is not accepted yet.
+ * `GET /feed` returns `{ items, nextCursor }` in the order `DEFAULT_RESURFACING_STRATEGY` chooses
+ * (`recency` by default, or `importance`). Send `nextCursor` back as `?cursor=` for the next page; it is
+ * `null` on the last page. A malformed cursor, or one issued under a different strategy, is
+ * `400 VALIDATION_CURSOR`. The cursor format is defined in the Spec 04 clarification.
  */
 export const feedRoutes = new Hono<AppEnv>();
 
 feedRoutes.get("/feed", requireReadAccess, async (c) => {
-  if (c.req.query("cursor") !== undefined) {
-    // Ignoring it would hand the client the same first page forever and look like an endless feed.
-    throw new ValidationError(
-      "Cursor pagination is not available yet; this endpoint returns one page",
-      "VALIDATION_CURSOR_UNSUPPORTED",
-    );
-  }
   const limit = parseLimit(c.req.query("limit"));
+  const cursor = c.req.query("cursor");
+  const strategy = getStrategyName(c.env);
   const isPublicRequest = c.get("isPublicRequest");
-  const items = await new FeedEngine(getDb(c)).listFeedItems({ limit, isPublicRequest });
-  return c.json({ items: items.map((item) => sanitizeFeedItem(item, isPublicRequest)) });
+  const page = await new FeedEngine(getDb(c)).listFeedItems({
+    limit,
+    isPublicRequest,
+    strategy,
+    ...(cursor === undefined ? {} : { cursor }),
+  });
+  return c.json({
+    items: page.items.map((item) => sanitizeFeedItem(item, isPublicRequest)),
+    nextCursor: page.nextCursor,
+  });
 });
 
 feedRoutes.get("/feed/:id", requireReadAccess, async (c) => {

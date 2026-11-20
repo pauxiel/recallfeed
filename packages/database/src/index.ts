@@ -21,7 +21,7 @@ export {
   insertFeedItem,
   insertFeedItems,
 } from "./queries/feed-items";
-export type { CandidateOptions, NewFeedItem } from "./queries/feed-items";
+export type { CandidateOptions, CandidateOrder, CandidatePosition, NewFeedItem } from "./queries/feed-items";
 
 export {
   MAX_SNOOZE_HOURS,

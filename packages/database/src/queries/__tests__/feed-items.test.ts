@@ -9,6 +9,7 @@ import {
   insertFeedItems,
 } from "../feed-items";
 import { getNotesMissingCardType, upsertNotes } from "../notes";
+import { toFeedItem } from "../rows";
 import { upsertSource } from "../sources";
 import { databaseUrl, makeNote, testDb, uniqueName } from "./helpers";
 
@@ -128,9 +129,16 @@ describe.skipIf(databaseUrl === "")("feed item queries (real PostgreSQL through 
 
   describe("getFeedItemCandidates", () => {
     /** Creates cards for a fresh source and returns them, so tests only reason about their own rows. */
+    /**
+     * Creates `count` cards that sort at the very front of the feed. These tests read one page of at most
+     * 200 cards, oldest effective time first, from a database other suites also fill. A card dated now
+     * would sort after every older card there and could fall off that page once the database holds 200
+     * of them. So each card is given a creation time older than every card made before it (the clock only
+     * moves forward, so a later base is older still), one millisecond apart, in creation order.
+     */
     async function cards(count: number): Promise<{ db: ReturnType<typeof testDb>; items: FeedItem[] }> {
       const { db, source, notes } = await seed(count);
-      const items = await insertFeedItems(
+      const created = await insertFeedItems(
         db,
         notes.map((note) => ({
           noteId: note.id,
@@ -140,7 +148,19 @@ describe.skipIf(databaseUrl === "")("feed item queries (real PostgreSQL through 
           isAiGenerated: false,
         })),
       );
-      return { db, items };
+      const ordered = created.map((item) => item.id);
+      const rows = await db.query(
+        `WITH base AS (
+           SELECT date_trunc('milliseconds', TIMESTAMPTZ '1900-01-01' - EXTRACT(EPOCH FROM clock_timestamp()) * interval '1 second') AS t
+         )
+         UPDATE feed_items f
+            SET created_at = (SELECT t FROM base) + (array_position($1::uuid[], f.id) - 1) * interval '1 millisecond'
+          WHERE f.id = ANY($1::uuid[])
+          RETURNING *`,
+        [ordered],
+      );
+      const byId = new Map(rows.map((row) => [row.id as string, toFeedItem(row)]));
+      return { db, items: ordered.map((id) => byId.get(id) as FeedItem) };
     }
 
     const ids = (list: readonly FeedItem[]): string[] => list.map((item) => item.id);

@@ -18,6 +18,11 @@ export type Env = {
    * 24 (Spec 04). A set but unusable value makes the review endpoint fail with a generic 500.
    */
   SNOOZE_DEFAULT_HOURS?: string;
+  /**
+   * The order `GET /feed` uses: `recency` (unset means this) or `importance`. Any other value makes
+   * `GET /feed` fail with a generic 500.
+   */
+  DEFAULT_RESURFACING_STRATEGY?: string;
 };
 
 /** Visibility of the deployment. */
