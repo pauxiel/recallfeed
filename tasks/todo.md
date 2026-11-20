@@ -1448,9 +1448,11 @@ Before this phase: 422 tests. This phase added 220, none skipped.
 - [ ] `pnpm --filter @recallfeed/feed-engine test` passes recency tests
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `pnpm --filter @recallfeed/feed-engine test`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `c3234ab` (with the ordering settled in `fedb23d`))
+- [x] Verified (self-tested: 2026-11-20, Node 22.23.3, pnpm 10.18.3: `packages/feed-engine/src/strategies/recency.ts` implements core's `IResurfacingStrategy`. `rank` drops cards snoozed past `now` and sorts by effective time (`lastReviewedAt ?? createdAt`, whole milliseconds) ascending, then `id` ascending; the input array is not changed. Unit tests in `recency.test.ts` (no database) include Task 25's three-timestamps case, the `createdAt` fallback, pre-1970 times, the snooze boundary, and the `id` tie-break matching PostgreSQL's UUID order. **Deviation:** a final `id` tie-break is added, which the task does not list, so the order is total; the Spec 04 clarification records it. See the Phase 4 Execution Record.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `feat/gate2-phase4-strategies-pagination` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/feed-engine/src/strategies/recency.ts`
@@ -1483,9 +1485,11 @@ Before this phase: 422 tests. This phase added 220, none skipped.
 - [ ] `pnpm --filter @recallfeed/feed-engine test` passes importance tests
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `pnpm --filter @recallfeed/feed-engine test`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `c3234ab`)
+- [x] Verified (self-tested: 2026-11-20: `packages/feed-engine/src/strategies/importance.ts` implements `IResurfacingStrategy`: `reviewCount` ascending, then effective time ascending, then `id`, with snoozed cards left out. There is no score. Unit tests in `importance.test.ts` include Task 26's `[0, 1, 3]` and snooze cases, the tie-breaks, a test that one more review always outranks any time difference, and `getStrategy` refusing `due_review` and inherited property names. Strategy and lookup mutation checks: 12 mutants, all caught. See the Phase 4 Execution Record.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `feat/gate2-phase4-strategies-pagination` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/feed-engine/src/strategies/importance.ts`
@@ -1523,9 +1527,11 @@ Before this phase: 422 tests. This phase added 220, none skipped.
 - [ ] Integration test: GET /feed with recency → cursor contains timestamp, GET /feed with importance → cursor contains `reviewCount` and the tie-break keys
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: integration test with both strategies)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `fedb23d` (ordering and cursor shape, a Spec 04 clarification), `821e3ae` (keyset query), `5107213` (cursor, engine page, `GET /feed`))
+- [x] Verified (self-tested: 2026-11-20: the cursor is base64url `{v:1, s, k:[keys], id}`, carrying **every ordering key plus `id`**, never a scalar. Recency's `k` is `[effective ms]`; importance's is `[reviewCount, effective ms]`. The next page is a strict SQL row comparison. **Tie tests:** 9 cards tying exactly, and 12 cards tying on count and on time including below the millisecond, cross page sizes 1 to 5 with each card returned exactly once. Whole-table walks in both orders, through the database query, the engine and the API, return each card once and match an independently written sort and `rank()`. Integration tests confirm a recency cursor holds the timestamp and an importance cursor holds `reviewCount` and the timestamp. A cursor from another strategy, a malformed or forged cursor, or one with extra fields is `400 VALIDATION_CURSOR`. Mutation checks: 9 query, 10 page, route and config, all caught (two survivors led to added tests). **Deviations:** (1) the codec is in `packages/feed-engine/src/cursor.ts`, not `packages/api/src/utils/cursor.ts`, because the keys come from the strategies there and the engine returns `nextCursor` as Spec 04 describes; (2) times are compared at millisecond precision so the database, `rank()` and the cursor agree exactly; (3) strategy selection is a new optional variable, `DEFAULT_RESURFACING_STRATEGY` (default `recency`); (4) three Phase 2 API tests that pinned the temporary 'no cursor' behavior now assert the new contract. See the Phase 4 Execution Record.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `feat/gate2-phase4-strategies-pagination` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/api/src/utils/cursor.ts`
@@ -1555,9 +1561,11 @@ Before this phase: 422 tests. This phase added 220, none skipped.
 - [ ] `pnpm --filter @recallfeed/feed-engine test` passes highlight tests
 
 **Status:**
-- [ ] Implemented (commit: _______)
-- [ ] Verified (command: `pnpm --filter @recallfeed/feed-engine test`)
-- [ ] Reviewed (evidence: ______)
+- [x] Implemented (commit: `302cbe5`)
+- [x] Verified (self-tested: 2026-11-20: `packages/feed-engine/src/generators/highlight.ts` is registered in the card generator. The rule: the first blockquote; otherwise every `**strong**`, `__strong__`, `*em*` and `_em_` span in order, without repeats; otherwise no card. Fenced and inline code are never highlights. `highlight.test.ts` has 29 unit tests, including Task 28's `> quote` case, and the database tests show highlight feed items are created once, none for a plain note, and alongside original cards. Mutation checks: 15 mutants, all caught (one survivor led to an added test). **Deviations:** (1) Spec 04's sketch falls back to the first long paragraph; here a note with no quote or emphasis gets no highlight card, because that fallback would mostly repeat the original card; (2) **the import still creates only `original` cards**: nothing reads `DEFAULT_CARD_TYPES` yet, so highlights are created only when `generateFeedItems(..., ["highlight"])` is called. See the Phase 4 Execution Record.)
+- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [ ] Pushed (not pushed; branch `feat/gate2-phase4-strategies-pagination` is local only)
+- [ ] Merged (not merged)
 
 **Files created:**
 - `packages/feed-engine/src/generators/highlight.ts`
@@ -1567,9 +1575,68 @@ Before this phase: 422 tests. This phase added 220, none skipped.
 
 ---
 
+## Phase 4 Execution Record (Tasks 25-28)
+
+Branch `feat/gate2-phase4-strategies-pagination`, started at `9856fd23d21b3ab95dee61a0a936bd67d9504a78` (remote `main`, verified live before branching; the primary checkout's stale local `main` was not used, and the earlier workspaces were not touched). Treehouse workspace `~/.treehouse/recallfeed-38ad39/4/recallfeed`, lease `9bad9a82b72abb7c18647b5164da21fc`, holder `recallfeed-kiro`. **Local only: not pushed, no pull request, not merged, not reviewed.** Phase 5 is not started.
+
+**Supervision during this phase:** Grok 4.7 is the temporary supervisor until Astra returns (2026-11-21 11:50). The implementation model is Opus 5.5.
+
+**Commits (oldest first):**
+- `c615fd1` the stale Phase 3 records corrected, as directed.
+- `fedb23d` the Spec 04 clarification: ordering keys, tie-breakers and the cursor shape, settled before any pagination code.
+- `c3234ab` Tasks 25 and 26.
+- `821e3ae` the keyset query.
+- `5107213` Task 27.
+- `302cbe5` Task 28.
+- `3860e9a` a fixture-independence fix to a shared Phase 2 test helper.
+- This record and the review request follow.
+
+**Gate at `3860e9a`** (Node 22.23.3, pnpm 10.18.3, PostgreSQL 17.12 through the Neon-compatible proxy; build outputs removed first; `TURBO_FORCE=true`; the shared fixture was idle and I was its only user):
+
+| Check | Result |
+|---|---|
+| `pnpm lint` | exit 0 |
+| `pnpm build` | exit 0, 5 of 5 tasks, 0 cached |
+| `pnpm typecheck` | exit 0, 5 of 5 tasks, 0 cached |
+| `node --test scripts/*.test.mjs` | 9 of 9 |
+| `pnpm test:coverage --reporter=default --reporter=json --outputFile.json=test-results.json`, then `node scripts/ci-check-test-results.mjs test-results.json` | exit 0; **40 files, 797 tests, 0 skipped, 0 failed**; checker "every test ran and passed"; 247.6 s |
+| Per package | api 342, connectors 57, core 38, database 205, feed-engine 155 |
+| Coverage | 96.69% statements, 92.4% branches, 98.71% functions, 96.58% lines (threshold 80% each). New files: `recency.ts` and `importance.ts` 100%, `ordering.ts` 100% of lines, `cursor.ts` 97.5%, `highlight.ts` 98%, `feed-engine.ts` 100%, `feed-items.ts` 100% of lines. |
+
+The suite was 644 tests before this phase; this phase added 153, none skipped.
+
+**The full serial run took three attempts, and I am reporting all three:**
+1. **First run, failed (2 tests):** two Phase 2 tests in the database package (published and snooze filters) expected cards created "now" on the first page of at most 200. Phase 4's tests leave many cards dated in the 1800s in the shared database (253 of 689), so those cards fell off that page. It is the same fixture-size dependence fixed twice before. Fixed in `3860e9a`: the shared helper now dates its cards before every earlier card, the assertions are unchanged, and three filter mutants are caught.
+2. **Second run, failed (1 test):** `snoozed again replaces the earlier snooze` (database package) recorded **682,883 ms** against a 5 s limit, and the run took 918.7 s. **The macOS power log records the Mac entering sleep at 13:21:16 and waking at 13:32:39**, inside that run. The test makes only ordinary database calls. I take the sleep as the explanation. That is inference from the log, not proof, and I did not investigate further. The log is saved as `/tmp/ci-evidence/phase4-gate-stall-20261120T183435Z.log` (SHA-256 `ae3e861f…e090`).
+3. **Third run, passed:** the same command with `caffeinate -i` (which keeps the Mac awake; nothing else changed), 13:39:18 to 13:43:27. The power log shows no sleep or wake in that window. This is the result in the table. The log is `/tmp/ci-evidence/phase4-gate-pass.log` (`68e6621e…2868`); the JSON report is `test-results.json` (`8f25ca10…e807`).
+
+**Other verification:**
+- Every behavior commit was mutation-checked against the real database and its file restored byte for byte: 12 strategy, 9 keyset query, 10 page, codec, route and config, 15 highlight, and 3 filter mutants, **49 in all, all caught**. Three survived on first try (default order, strategy binding through the API, mixed fences), and a test was added for each; I re-ran the mutant to confirm.
+- `wrangler deploy --dry-run` parsed the edited `wrangler.toml` and bundled the Worker, deploying nothing.
+- The Skeleton Crew greps after every save under `packages/` found no demo-app names, no `apps/` imports, and no sibling imports in core.
+- I probed the millisecond rule against the real driver before relying on it: SQL `floor(EXTRACT(EPOCH)*1000)` equals `Date.getTime()` for 10 edge values (before 1970, at the epoch, sub-millisecond) and all 550 rows then in the fixture, with 0 mismatches.
+
+**Design decisions, for challenge:**
+1. **Keyset pagination in SQL, not `rank()` over a full candidate list.** Spec 04's flow fetches candidates and ranks them in memory, which a cursor cannot page correctly unless every candidate is loaded. The database orders and slices each page; `rank()` implements the identical order, and a test proves they agree.
+2. **Millisecond precision.** This keeps the database, `rank()` and JavaScript `Date` in exact agreement. Cards less than a millisecond apart are ordered by `id`, not by microsecond.
+3. **The cursor carries values, not a row reference.** It survives its card being deleted, unpublished or snoozed. Reviews only increase keys, so a card reviewed while paging is never skipped, though it may appear again.
+4. **A cursor is bound to its strategy**, and changing `DEFAULT_RESURFACING_STRATEGY` invalidates outstanding cursors (400).
+5. **`limit + 1` read** decides `nextCursor`, so the last page never needs an empty follow-up request.
+6. **A note without a quote or emphasis gets no highlight card** (deviation from Spec 04's fallback).
+7. **The database package's test files now run one at a time**, like the other database-backed packages.
+
+**Limits:**
+- **Privacy:** a public cursor carries the last item's `reviewCount` (importance) and effective time (both), which public responses otherwise omit. It is recorded in the Spec 04 clarification and the API README, but **not protected**. Options are in the review request.
+- **`DEFAULT_CARD_TYPES` is not wired:** the import still creates only `original` cards, so in the running product nothing creates highlight cards yet. The feed is also not filtered by `enabledCardTypes`.
+- **Not implemented:** core's `IFeedEngine.getFeed` (no `FeedConfig` input and no `total`), `due_review`, and a `DEFAULT_PAGE_SIZE` variable (the default stays 10).
+- **Performance:** the order uses a computed expression (`floor(EXTRACT(EPOCH FROM COALESCE(...)))`) that no index covers, so each page scans and sorts the matching rows in the database. At this skeleton's scale that is database time, not Worker CPU, but a large deployment would want an expression index.
+- **`docs/setup.md`** still does not exist and was not created, as directed. The new variable is documented in the `wrangler.toml` comments and the API README.
+- Not run against a deployed Worker, real Cloudflare Access, or hosted Neon.
+- The `/tmp` evidence files can disappear.
+
 **PHASE 4 CHECKPOINT:** Multiple strategies work, pagination handles strategy-specific sort keys. Stop for human review before proceeding to Phase 5.
 
-**Checkpoint criteria:**
+**Checkpoint criteria** (self-verification evidence is in the Phase 4 Execution Record; the boxes stay unchecked until review):
 - [ ] Recency strategy sorts oldest first (ascending)
 - [ ] Importance strategy scores and ranks correctly
 - [ ] Strategy-dependent pagination cursors work (timestamp for recency, `reviewCount` plus tie-break keys for importance; no computed score)
