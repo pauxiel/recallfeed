@@ -1450,7 +1450,7 @@ Before this phase: 422 tests. This phase added 220, none skipped.
 **Status:**
 - [x] Implemented (commit: `c3234ab` (with the ordering settled in `fedb23d`))
 - [x] Verified (self-tested: 2026-11-20, Node 22.23.3, pnpm 10.18.3: `packages/feed-engine/src/strategies/recency.ts` implements core's `IResurfacingStrategy`. `rank` drops cards snoozed past `now` and sorts by effective time (`lastReviewedAt ?? createdAt`, whole milliseconds) ascending, then `id` ascending; the input array is not changed. Unit tests in `recency.test.ts` (no database) include Task 25's three-timestamps case, the `createdAt` fallback, pre-1970 times, the snooze boundary, and the `id` tie-break matching PostgreSQL's UUID order. **Deviation:** a final `id` tie-break is added, which the task does not list, so the order is total; the Spec 04 clarification records it. See the Phase 4 Execution Record.)
-- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [x] Reviewed (independent: the temporary supervisor, **Grok 4.7**, 2026-11-20, **APPROVE** at `5f684102c42e5d25080ff9eef3a731cff8b20a4f`, relayed by the user. The public cursor disclosure is accepted, cursors are not encrypted, and the pagination contract is unchanged. Wiring highlight cards into imports is a separate follow-up. **No written review file:** Firstmate's scout report (`firstmate/data/recallfeed-phase4-review/report.md`) records that its reviewer could not authenticate and produced no report. The documentation addendum follows in this branch. See the Phase 4 Execution Record.)
 - [ ] Pushed (not pushed; branch `feat/gate2-phase4-strategies-pagination` is local only)
 - [ ] Merged (not merged)
 
@@ -1487,7 +1487,7 @@ Before this phase: 422 tests. This phase added 220, none skipped.
 **Status:**
 - [x] Implemented (commit: `c3234ab`)
 - [x] Verified (self-tested: 2026-11-20: `packages/feed-engine/src/strategies/importance.ts` implements `IResurfacingStrategy`: `reviewCount` ascending, then effective time ascending, then `id`, with snoozed cards left out. There is no score. Unit tests in `importance.test.ts` include Task 26's `[0, 1, 3]` and snooze cases, the tie-breaks, a test that one more review always outranks any time difference, and `getStrategy` refusing `due_review` and inherited property names. Strategy and lookup mutation checks: 12 mutants, all caught. See the Phase 4 Execution Record.)
-- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [x] Reviewed (independent: the temporary supervisor, **Grok 4.7**, 2026-11-20, **APPROVE** at `5f684102c42e5d25080ff9eef3a731cff8b20a4f`, relayed by the user. The public cursor disclosure is accepted, cursors are not encrypted, and the pagination contract is unchanged. Wiring highlight cards into imports is a separate follow-up. **No written review file:** Firstmate's scout report (`firstmate/data/recallfeed-phase4-review/report.md`) records that its reviewer could not authenticate and produced no report. The documentation addendum follows in this branch. See the Phase 4 Execution Record.)
 - [ ] Pushed (not pushed; branch `feat/gate2-phase4-strategies-pagination` is local only)
 - [ ] Merged (not merged)
 
@@ -1529,7 +1529,7 @@ Before this phase: 422 tests. This phase added 220, none skipped.
 **Status:**
 - [x] Implemented (commit: `fedb23d` (ordering and cursor shape, a Spec 04 clarification), `821e3ae` (keyset query), `5107213` (cursor, engine page, `GET /feed`))
 - [x] Verified (self-tested: 2026-11-20: the cursor is base64url `{v:1, s, k:[keys], id}`, carrying **every ordering key plus `id`**, never a scalar. Recency's `k` is `[effective ms]`; importance's is `[reviewCount, effective ms]`. The next page is a strict SQL row comparison. **Tie tests:** 9 cards tying exactly, and 12 cards tying on count and on time including below the millisecond, cross page sizes 1 to 5 with each card returned exactly once. Whole-table walks in both orders, through the database query, the engine and the API, return each card once and match an independently written sort and `rank()`. Integration tests confirm a recency cursor holds the timestamp and an importance cursor holds `reviewCount` and the timestamp. A cursor from another strategy, a malformed or forged cursor, or one with extra fields is `400 VALIDATION_CURSOR`. Mutation checks: 9 query, 10 page, route and config, all caught (two survivors led to added tests). **Deviations:** (1) the codec is in `packages/feed-engine/src/cursor.ts`, not `packages/api/src/utils/cursor.ts`, because the keys come from the strategies there and the engine returns `nextCursor` as Spec 04 describes; (2) times are compared at millisecond precision so the database, `rank()` and the cursor agree exactly; (3) strategy selection is a new optional variable, `DEFAULT_RESURFACING_STRATEGY` (default `recency`); (4) three Phase 2 API tests that pinned the temporary 'no cursor' behavior now assert the new contract. See the Phase 4 Execution Record.)
-- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [x] Reviewed (independent: the temporary supervisor, **Grok 4.7**, 2026-11-20, **APPROVE** at `5f684102c42e5d25080ff9eef3a731cff8b20a4f`, relayed by the user. The public cursor disclosure is accepted, cursors are not encrypted, and the pagination contract is unchanged. Wiring highlight cards into imports is a separate follow-up. **No written review file:** Firstmate's scout report (`firstmate/data/recallfeed-phase4-review/report.md`) records that its reviewer could not authenticate and produced no report. The documentation addendum follows in this branch. See the Phase 4 Execution Record.)
 - [ ] Pushed (not pushed; branch `feat/gate2-phase4-strategies-pagination` is local only)
 - [ ] Merged (not merged)
 
@@ -1563,7 +1563,7 @@ Before this phase: 422 tests. This phase added 220, none skipped.
 **Status:**
 - [x] Implemented (commit: `302cbe5`)
 - [x] Verified (self-tested: 2026-11-20: `packages/feed-engine/src/generators/highlight.ts` is registered in the card generator. The rule: the first blockquote; otherwise every `**strong**`, `__strong__`, `*em*` and `_em_` span in order, without repeats; otherwise no card. Fenced and inline code are never highlights. `highlight.test.ts` has 29 unit tests, including Task 28's `> quote` case, and the database tests show highlight feed items are created once, none for a plain note, and alongside original cards. Mutation checks: 15 mutants, all caught (one survivor led to an added test). **Deviations:** (1) Spec 04's sketch falls back to the first long paragraph; here a note with no quote or emphasis gets no highlight card, because that fallback would mostly repeat the original card; (2) **the import still creates only `original` cards**: nothing reads `DEFAULT_CARD_TYPES` yet, so highlights are created only when `generateFeedItems(..., ["highlight"])` is called. See the Phase 4 Execution Record.)
-- [ ] Reviewed (not yet reviewed; independent review of a named revision is pending)
+- [x] Reviewed (independent: the temporary supervisor, **Grok 4.7**, 2026-11-20, **APPROVE** at `5f684102c42e5d25080ff9eef3a731cff8b20a4f`, relayed by the user. The public cursor disclosure is accepted, cursors are not encrypted, and the pagination contract is unchanged. Wiring highlight cards into imports is a separate follow-up. **No written review file:** Firstmate's scout report (`firstmate/data/recallfeed-phase4-review/report.md`) records that its reviewer could not authenticate and produced no report. The documentation addendum follows in this branch. See the Phase 4 Execution Record.)
 - [ ] Pushed (not pushed; branch `feat/gate2-phase4-strategies-pagination` is local only)
 - [ ] Merged (not merged)
 
@@ -1577,7 +1577,7 @@ Before this phase: 422 tests. This phase added 220, none skipped.
 
 ## Phase 4 Execution Record (Tasks 25-28)
 
-Branch `feat/gate2-phase4-strategies-pagination`, started at `9856fd23d21b3ab95dee61a0a936bd67d9504a78` (remote `main`, verified live before branching; the primary checkout's stale local `main` was not used, and the earlier workspaces were not touched). Treehouse workspace `~/.treehouse/recallfeed-38ad39/4/recallfeed`, lease `9bad9a82b72abb7c18647b5164da21fc`, holder `recallfeed-kiro`. **Local only: not pushed, no pull request, not merged, not reviewed.** Phase 5 is not started.
+Branch `feat/gate2-phase4-strategies-pagination`, started at `9856fd23d21b3ab95dee61a0a936bd67d9504a78` (remote `main`, verified live before branching; the primary checkout's stale local `main` was not used, and the earlier workspaces were not touched). Treehouse workspace `~/.treehouse/recallfeed-38ad39/4/recallfeed`, lease `9bad9a82b72abb7c18647b5164da21fc`, holder `recallfeed-kiro`. **Local only: not pushed, no pull request, not merged.** Approved at `5f68410` (see "Review of Phase 4" below). Phase 5 is not started.
 
 **Supervision during this phase:** Grok 4.7 is the temporary supervisor until Astra returns (2026-11-21 11:50). The implementation model is Opus 5.5.
 
@@ -1589,7 +1589,8 @@ Branch `feat/gate2-phase4-strategies-pagination`, started at `9856fd23d21b3ab95d
 - `5107213` Task 27.
 - `302cbe5` Task 28.
 - `3860e9a` a fixture-independence fix to a shared Phase 2 test helper.
-- This record and the review request follow.
+- `5f68410` this record (the approved revision), then `adc5ec4` the review request and `ca6dcb0` its submission marker.
+- `68ee8d4` the accepted cursor disclosure, documented after review; then this record's update and the addendum request.
 
 **Gate at `3860e9a`** (Node 22.23.3, pnpm 10.18.3, PostgreSQL 17.12 through the Neon-compatible proxy; build outputs removed first; `TURBO_FORCE=true`; the shared fixture was idle and I was its only user):
 
@@ -1626,22 +1627,38 @@ The suite was 644 tests before this phase; this phase added 153, none skipped.
 7. **The database package's test files now run one at a time**, like the other database-backed packages.
 
 **Limits:**
-- **Privacy:** a public cursor carries the last item's `reviewCount` (importance) and effective time (both), which public responses otherwise omit. It is recorded in the Spec 04 clarification and the API README, but **not protected**. Options are in the review request.
-- **`DEFAULT_CARD_TYPES` is not wired:** the import still creates only `original` cards, so in the running product nothing creates highlight cards yet. The feed is also not filtered by `enabledCardTypes`.
+- **Privacy (accepted disclosure):** a public cursor carries the last item's `reviewCount` (importance) and effective time (both), which public responses otherwise omit. The supervisor accepted this at review. Cursors are not encrypted, and it is documented as an accepted disclosure (see "Review of Phase 4").
+- **`DEFAULT_CARD_TYPES` is not wired:** the import still creates only `original` cards, so in the running product nothing creates highlight cards yet. The feed is also not filtered by `enabledCardTypes`. At review this was made **a separate follow-up**, not part of Phase 4 or its addendum.
 - **Not implemented:** core's `IFeedEngine.getFeed` (no `FeedConfig` input and no `total`), `due_review`, and a `DEFAULT_PAGE_SIZE` variable (the default stays 10).
 - **Performance:** the order uses a computed expression (`floor(EXTRACT(EPOCH FROM COALESCE(...)))`) that no index covers, so each page scans and sorts the matching rows in the database. At this skeleton's scale that is database time, not Worker CPU, but a large deployment would want an expression index.
 - **`docs/setup.md`** still does not exist and was not created, as directed. The new variable is documented in the `wrangler.toml` comments and the API README.
 - Not run against a deployed Worker, real Cloudflare Access, or hosted Neon.
 - The `/tmp` evidence files can disappear.
 
+### Review of Phase 4 (Grok 4.7, temporary supervisor)
+
+**Verdict, recorded as received:** **APPROVE** at `5f684102c42e5d25080ff9eef3a731cff8b20a4f`. The user relayed it on 2026-11-20 with the cursor decision. Request `.kiro/reviews/requests/20261120-184528-phase4-strategies-pagination.md` (committed at `adc5ec4`, SHA-256 `f9d35315…6ebd`) was delivered to Firstmate's inbox as note `1795200432-e8afXg`. **No written review file exists.** Firstmate's intake record (`firstmate/data/recallfeed/reviews/2026-11-20-phase4-review.md`) checked the request hash and all 31 file hashes. Its scout's report (`firstmate/data/recallfeed-phase4-review/report.md`) says the reviewer could not authenticate and produced no report. The approval therefore rests on the relayed verdict alone.
+
+**Decisions made at review:**
+1. **Public cursor disclosure: accepted (option a).** A public cursor reveals one card's effective time, and under `importance` its `reviewCount`, on each page that has a `nextCursor`. Public card responses omit both fields. Cursors are **not** encrypted, and the pagination contract is unchanged. Options (b), AES-GCM cursors, and (c), id-only public cursors, are not adopted.
+2. **Highlight cards in normal imports: not in this patch.** Wiring `DEFAULT_CARD_TYPES` into the import stays a separate follow-up.
+
+I agree with both decisions, so there is no disagreement to record.
+
+**Addendum (documentation only, `68ee8d4`):** the Spec 04 clarification's privacy note now records the disclosure as accepted. It says what the cursor reveals and which public fields those values correspond to. It states that the cursor carries nothing else and that a forged cursor cannot reach an unpublished card (`feed-pagination.test.ts`). The same statement is in `packages/api/README.md`, `packages/feed-engine/README.md` and the `encodeCursor` JSDoc. No code behavior, test or contract changed. The Skeleton Crew greps found nothing.
+
+**Gate at `68ee8d4`** (same settings as above: build outputs removed, `TURBO_FORCE=true`, the fixture idle, `caffeinate -i`): lint, build and typecheck exit 0 (5 of 5 tasks, 0 cached); checker controls 9 of 9. `pnpm test:coverage` with the JSON reporter ran from 19:08:45 to 19:12:25 UTC, with no sleep or wake in the power log. Result: **40 files, 797 tests, 0 skipped, 0 failed** (api 342, connectors 57, core 38, database 205, feed-engine 155). Coverage: 96.69% statements, 92.4% branches, 98.71% functions, 96.58% lines. The checker reports "every test ran and passed". My first checker call failed with `TEST_DATABASE_URL is not set` because I omitted the variable in that shell. Rerun with it set, the checker passed on the same report. Log `/tmp/ci-evidence/addendum-gate.log` (SHA-256 `b4216e9a…927f`), report `test-results.json` (`37f27de3…1edb`). The mutation check was not repeated, because no tested behavior changed.
+
+**Still not authorized:** push, pull request, merge, deployment, cleanup, `docs/setup.md`, and Phase 5.
+
 **PHASE 4 CHECKPOINT:** Multiple strategies work, pagination handles strategy-specific sort keys. Stop for human review before proceeding to Phase 5.
 
-**Checkpoint criteria** (self-verification evidence is in the Phase 4 Execution Record; the boxes stay unchecked until review):
-- [ ] Recency strategy sorts oldest first (ascending)
-- [ ] Importance strategy scores and ranks correctly
-- [ ] Strategy-dependent pagination cursors work (timestamp for recency, `reviewCount` plus tie-break keys for importance; no computed score)
-- [ ] Highlight card generator creates cards
-- [ ] All feed-engine tests pass
+**Checkpoint criteria** (self-verification evidence is in the Phase 4 Execution Record; checked after the approval at `5f68410`):
+- [x] Recency strategy sorts oldest first (ascending)
+- [x] Importance strategy scores and ranks correctly (it ranks by `reviewCount`, then time and `id`; there is no score)
+- [x] Strategy-dependent pagination cursors work (timestamp for recency, `reviewCount` plus tie-break keys for importance; no computed score)
+- [x] Highlight card generator creates cards (when called with `highlight`; normal imports do not request it yet, which is a separate follow-up)
+- [x] All feed-engine tests pass
 
 ---
 
