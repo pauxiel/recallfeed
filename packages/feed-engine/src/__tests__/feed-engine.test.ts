@@ -197,7 +197,7 @@ describe.skipIf(databaseUrl === "")("FeedEngine (real PostgreSQL through the pro
       expect(await generateFeedItems(db, sourceId, ["original", "original"])).toBe(0);
     });
 
-    it.each([["highlight"], ["summary"], ["code_snippet"], ["reflection_prompt"]] as const)(
+    it.each([["summary"], ["code_snippet"], ["reflection_prompt"]] as const)(
       "refuses %s, which has no generator yet, instead of silently skipping it",
       async (type) => {
         await expect(generateFeedItems(testDb(), "11111111-1111-4111-8111-111111111111", [type])).rejects.toBeInstanceOf(
@@ -205,6 +205,57 @@ describe.skipIf(databaseUrl === "")("FeedEngine (real PostgreSQL through the pro
         );
       },
     );
+
+    it("creates a highlight card from a note's blockquote (Task 28), once, and none for a note with nothing to highlight", async () => {
+      const db = testDb();
+      const name = uniqueName("hl");
+      const markdown = [
+        `# Quoted ${name}`,
+        "",
+        "Some context first.",
+        "",
+        "> The unexamined life is not worth living.",
+        "> Socrates",
+        "",
+        `# Plain ${name}`,
+        "",
+        "Nothing quoted and nothing emphasized here.",
+        "",
+        `# Emphasized ${name}`,
+        "",
+        "Remember: **commit early** and *push often*.",
+      ].join("\n");
+      const { sourceId } = await new FeedEngine(db).importMarkdown(markdown, { name });
+
+      const created = await generateFeedItems(db, sourceId, ["highlight"]);
+      const cards = await db.query(
+        `SELECT f.card_type, f.content, f.is_ai_generated, n.title
+           FROM feed_items f JOIN notes n ON n.id = f.note_id
+          WHERE f.source_id = $1 AND f.card_type = 'highlight' ORDER BY n.title`,
+        [sourceId],
+      );
+
+      expect(created).toBe(2);
+      expect(cards.map((c) => [String(c.title).split(" ")[0], c.content, c.is_ai_generated])).toEqual([
+        ["Emphasized", "commit early\npush often", false],
+        ["Quoted", "The unexamined life is not worth living.\nSocrates", false],
+      ]);
+      // Idempotent, and the original cards are untouched.
+      expect(await generateFeedItems(db, sourceId, ["highlight"])).toBe(0);
+      const originals = await db.query("SELECT count(*)::int AS n FROM feed_items WHERE source_id = $1 AND card_type = 'original'", [sourceId]);
+      expect(originals[0]?.n).toBe(3);
+    });
+
+    it("original and highlight can be generated together, and a highlight card is a separate feed item", async () => {
+      const db = testDb();
+      const name = uniqueName("hl2");
+      const { sourceId } = await new FeedEngine(db).importMarkdown(`# Q ${name}\n\n> quoted line ${name}`, { name });
+      await db.query("DELETE FROM feed_items WHERE source_id = $1", [sourceId]);
+
+      expect(await generateFeedItems(db, sourceId, ["original", "highlight"])).toBe(2);
+      const types = await db.query("SELECT card_type FROM feed_items WHERE source_id = $1 ORDER BY card_type", [sourceId]);
+      expect(types.map((t) => t.card_type)).toEqual(["highlight", "original"]);
+    });
   });
 
   describe("intermediate feed reads", () => {

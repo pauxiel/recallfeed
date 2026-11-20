@@ -7,7 +7,7 @@ HTTP, authentication, or any application. Specification: [`.kiro/specs/04-feed-e
 ## Scope (Gate 2, Phase 2)
 
 Built: Markdown import, original-card creation, review actions (Phase 3), the recency and importance
-strategies with keyset cursor pagination (Phase 4). Not built, and not
+strategies with keyset cursor pagination, and the highlight card generator (Phase 4). Not built, and not
 claimed: the `due_review` strategy, the Notion import, and AI or queued work. `FeedEngine` therefore does not
 implement core's whole `IFeedEngine`.
 
@@ -23,7 +23,8 @@ implement core's whole `IFeedEngine`.
 | `FeedEngine.getFeedItem(id, { isPublicRequest })` | One card, or null. A public request cannot see an unpublished card. |
 | `FeedEngine.recordReview(id, action, { snoozeHours })` | Applies one of the six review actions and logs it in one statement. Returns the updated card. Throws `ValidationError` for an unknown action or unusable `snoozeHours`, `NotFoundError` (`NOT_FOUND_FEED_ITEM`) for an unknown card. Authorization is the caller's job. |
 | `DEFAULT_SNOOZE_HOURS` | 24 (Spec 04). |
-| `generateFeedItems(db, sourceId, cardTypes)` | Creates the missing cards. Only `original` is supported; other types throw instead of being skipped. |
+| `generateFeedItems(db, sourceId, cardTypes)` | Creates the missing cards of `original` or `highlight`. Other types throw instead of being skipped. A note with nothing to highlight gets no highlight card. |
+| `generateHighlightCard(note)`, `extractHighlight(content)` | The highlight rule: the first blockquote; otherwise every `**strong**`, `__strong__`, `*em*` and `_em_` span in order; otherwise none. Code is never a highlight. |
 | `assertValidImport(content, name?)` | The input checks, also usable by an API layer. |
 
 ## How an import behaves

@@ -2,17 +2,20 @@ import { ValidationError } from "@recallfeed/core";
 import type { CardType, Note } from "@recallfeed/core";
 import { getNotesMissingCardType, insertFeedItems } from "@recallfeed/database";
 import type { DbClient, NewFeedItem } from "@recallfeed/database";
+import { generateHighlightCard } from "./generators/highlight";
 import { generateOriginalCard } from "./generators/original";
 
-type CardGenerator = (note: Note) => NewFeedItem;
+/** Builds a note's card of one type, or returns null when the note has nothing for that type. */
+type CardGenerator = (note: Note) => NewFeedItem | null;
 
 /**
- * The deterministic generators available now. Only "original" exists in this phase. The other card
- * types (highlight, summary, code_snippet, reflection_prompt) arrive in later work, and the AI
- * ones never come from the synchronous import path.
+ * The deterministic generators available now: "original" (Phase 2) and "highlight" (Phase 4). The
+ * other card types (summary, code_snippet, reflection_prompt) arrive in later work, and the AI ones
+ * never come from the synchronous import path.
  */
 const GENERATORS: Partial<Record<CardType, CardGenerator>> = {
   original: generateOriginalCard,
+  highlight: generateHighlightCard,
 };
 
 /**
@@ -23,7 +26,8 @@ const GENERATORS: Partial<Record<CardType, CardGenerator>> = {
  *
  * @param db - A request-scoped client from `createDb`.
  * @param sourceId - The source whose notes get cards.
- * @param cardTypes - The card types to create. Only "original" is supported yet.
+ * @param cardTypes - The card types to create: "original" or "highlight". A note with nothing to
+ * highlight gets no highlight card.
  * @returns How many cards this call created.
  * @throws ValidationError if a requested type has no generator, so nothing is silently skipped.
  */
@@ -46,7 +50,8 @@ export async function generateFeedItems(
       continue;
     }
     const missing = await getNotesMissingCardType(db, sourceId, type);
-    created += (await insertFeedItems(db, missing.map(generate))).length;
+    const cards = missing.map(generate).filter((card): card is NewFeedItem => card !== null);
+    created += (await insertFeedItems(db, cards)).length;
   }
   return created;
 }
