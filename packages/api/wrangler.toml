@@ -10,6 +10,10 @@
 #                     number from 1 to 8760. Unset means 24. A value that is set but unusable (for example
 #                     "abc", "0" or "1.5") makes only the `snoozed` action fail with a generic 500. It is a
 #                     plain var, not a secret, so a deployment can set it under [vars] below.
+#   DEFAULT_RESURFACING_STRATEGY  var  Optional. The order of GET /feed: "recency" (the default when unset
+#                     or blank) or "importance". Any other value, including "due_review" (not implemented yet),
+#                     makes GET /feed fail with a generic 500. Changing it invalidates cursors already handed out,
+#                     which then return 400 VALIDATION_CURSOR.
 #
 # FEED_VISIBILITY below is the default and fails closed: anything other than the exact value "public"
 # means private. A deployment chooses its mode by overriding this var, not by changing code.

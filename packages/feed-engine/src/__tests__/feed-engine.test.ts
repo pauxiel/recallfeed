@@ -233,8 +233,8 @@ describe.skipIf(databaseUrl === "")("FeedEngine (real PostgreSQL through the pro
       const published = await seeded(true);
       const hidden = await seeded(false);
 
-      const publicList = (await published.engine.listFeedItems({ isPublicRequest: true, limit: MAX_FEED_LIMIT })).map((c) => c.id);
-      const ownerList = (await published.engine.listFeedItems({ isPublicRequest: false, limit: MAX_FEED_LIMIT })).map((c) => c.id);
+      const publicList = (await published.engine.listFeedItems({ isPublicRequest: true, limit: MAX_FEED_LIMIT })).items.map((c) => c.id);
+      const ownerList = (await published.engine.listFeedItems({ isPublicRequest: false, limit: MAX_FEED_LIMIT })).items.map((c) => c.id);
 
       expect(publicList).toContain(published.id);
       expect(publicList).not.toContain(hidden.id);
@@ -254,22 +254,22 @@ describe.skipIf(databaseUrl === "")("FeedEngine (real PostgreSQL through the pro
       const { db, engine, id } = await seeded(true);
       await db.query("UPDATE feed_items SET snoozed_until = NOW() + interval '1 day' WHERE id = $1", [id]);
 
-      const publicList = (await engine.listFeedItems({ isPublicRequest: true, limit: MAX_FEED_LIMIT })).map((c) => c.id);
-      const ownerList = (await engine.listFeedItems({ isPublicRequest: false, limit: MAX_FEED_LIMIT })).map((c) => c.id);
+      const publicList = (await engine.listFeedItems({ isPublicRequest: true, limit: MAX_FEED_LIMIT })).items.map((c) => c.id);
+      const ownerList = (await engine.listFeedItems({ isPublicRequest: false, limit: MAX_FEED_LIMIT })).items.map((c) => c.id);
 
       expect(publicList).not.toContain(id);
       expect(ownerList).not.toContain(id);
 
       // And the same card is visible again once the snooze has ended, so the absence above is the snooze.
       await db.query("UPDATE feed_items SET snoozed_until = NOW() - interval '1 minute' WHERE id = $1", [id]);
-      const after = (await engine.listFeedItems({ isPublicRequest: false, limit: MAX_FEED_LIMIT })).map((c) => c.id);
+      const after = (await engine.listFeedItems({ isPublicRequest: false, limit: MAX_FEED_LIMIT })).items.map((c) => c.id);
       expect(after).toContain(id);
     });
 
     it("defaults the page size to 10 and enforces 1 to 50", async () => {
       const { engine } = await seeded(true);
 
-      expect((await engine.listFeedItems({ isPublicRequest: false })).length).toBeLessThanOrEqual(DEFAULT_FEED_LIMIT);
+      expect((await engine.listFeedItems({ isPublicRequest: false })).items.length).toBeLessThanOrEqual(DEFAULT_FEED_LIMIT);
       expect(DEFAULT_FEED_LIMIT).toBe(10);
       expect(MAX_FEED_LIMIT).toBe(50);
       for (const limit of [0, -1, 51, 1.5, Number.NaN]) {

@@ -39,7 +39,7 @@ describe.skipIf(databaseUrl === "")("GET /feed (real PostgreSQL through the prox
       }
     });
 
-    it("returns { items } with no cursor, and limit bounds the page", async () => {
+    it("returns { items, nextCursor }, and limit bounds the page", async () => {
       const oldestSeeded = await seedCard({ published: true });
       const middle = await seedCard({ published: true });
       const newestSeeded = await seedCard({ published: true });
@@ -47,7 +47,8 @@ describe.skipIf(databaseUrl === "")("GET /feed (real PostgreSQL through the prox
       const body = await json<FeedBody>(await get("/feed?limit=2"));
 
       // The last card seeded has the oldest review time, so it leads the list.
-      expect(Object.keys(body)).toEqual(["items"]);
+      expect(Object.keys(body).sort()).toEqual(["items", "nextCursor"]);
+      expect(typeof (body as unknown as { nextCursor: unknown }).nextCursor).toBe("string");
       expect(body.items.map((item) => item.id)).toEqual([newestSeeded.id, middle.id]);
       expect(body.items.map((item) => item.id)).not.toContain(oldestSeeded.id);
     });
@@ -77,12 +78,12 @@ describe.skipIf(databaseUrl === "")("GET /feed (real PostgreSQL through the prox
       expect((await get(`/feed?limit=${limit}`)).status).toBe(200);
     });
 
-    it("any cursor is 400 VALIDATION_CURSOR_UNSUPPORTED instead of being ignored", async () => {
+    it("a malformed cursor is 400 VALIDATION_CURSOR instead of being ignored", async () => {
       for (const query of ["cursor=abc", "cursor=", "cursor=abc&limit=5"]) {
         const response = await get(`/feed?${query}`);
 
         expect(response.status).toBe(400);
-        expect((await json(response)).code).toBe("VALIDATION_CURSOR_UNSUPPORTED");
+        expect((await json(response)).code).toBe("VALIDATION_CURSOR");
       }
     });
 
@@ -169,11 +170,11 @@ describe.skipIf(databaseUrl === "")("GET /feed (real PostgreSQL through the prox
       expect((await get("/feed?limit=0", privateEnv(), accessContext(null))).status).toBe(401);
     });
 
-    it("a cursor is 400 for the owner too", async () => {
+    it("a malformed cursor is 400 for the owner too", async () => {
       const response = await get("/feed?cursor=abc", privateEnv());
 
       expect(response.status).toBe(400);
-      expect((await json(response)).code).toBe("VALIDATION_CURSOR_UNSUPPORTED");
+      expect((await json(response)).code).toBe("VALIDATION_CURSOR");
     });
   });
 });
