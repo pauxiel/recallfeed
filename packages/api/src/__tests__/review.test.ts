@@ -331,6 +331,57 @@ describe.skipIf(databaseUrl === "")(
     });
 
     describe("authorization is checked first, and a refused request changes nothing", () => {
+      /** Malformed or unacceptable bodies. Each would be a 400 for an authorized caller. */
+      const malformed: [string, Record<string, string>, string][] = [
+        ["invalid JSON", { "Content-Type": "application/json" }, "{not json"],
+        ["an unknown action", { "Content-Type": "application/json" }, '{"action":"nope"}'],
+        ["a body over the 1 KB cap", { "Content-Type": "application/json" }, JSON.stringify({ action: "reviewed", pad: "x".repeat(4000) })],
+        ["the wrong content type", { "Content-Type": "text/plain" }, '{"action":"reviewed"}'],
+        ["an empty body", { "Content-Type": "application/json" }, ""],
+      ];
+
+      /**
+       * Sends every malformed body to a real card and to a missing one with the given refused credentials,
+       * and checks that each refusal is the expected one, identical for both cards, and writes nothing.
+       */
+      async function expectMalformedRefused(
+        env: ReturnType<typeof publicEnv>,
+        credentials: Record<string, string>,
+        ctx: ReturnType<typeof accessContext>,
+        status: number,
+        code: string,
+      ): Promise<void> {
+        const real = await seedCard();
+        const before = await stored(real.id);
+        const totalBefore = (await testDb().query("SELECT count(*)::int AS n FROM review_events"))[0]?.n as number;
+
+        for (const [label, headers, body] of malformed) {
+          const send = (id: string): Promise<Response> =>
+            call(`/feed/${id}/review`, { method: "PUT", headers: { ...headers, ...credentials }, body }, env, ctx);
+          const forReal = await send(real.id);
+          const forMissing = await send(NO_SUCH_CARD);
+
+          expect([forReal.status, forMissing.status], label).toEqual([status, status]);
+          const realBody = await json(forReal);
+          expect(realBody.code, label).toBe(code);
+          // The same answer whether or not the card exists, so a refused caller learns nothing about it.
+          expect(await json(forMissing), label).toEqual(realBody);
+        }
+
+        expect(await stored(real.id)).toEqual(before);
+        expect((await testDb().query("SELECT count(*)::int AS n FROM review_events"))[0]?.n).toBe(totalBefore);
+      }
+
+      it("public key mode: a malformed body without a valid key is refused for authorization, writes nothing, and reveals nothing", async () => {
+        await expectMalformedRefused(publicEnv(), {}, accessContext(null), 401, "AUTH_API_KEY_MISSING");
+        await expectMalformedRefused(publicEnv(), { "X-API-Key": "wrong" }, accessContext(null), 403, "AUTH_API_KEY_INVALID");
+      });
+
+      it("private owner mode: a malformed same-origin body from a non-owner is refused for authorization, writes nothing, and reveals nothing", async () => {
+        await expectMalformedRefused(privateEnv(), sameOrigin, accessContext(null), 401, "AUTH_REQUIRED");
+        await expectMalformedRefused(privateEnv(), sameOrigin, accessContext({ email: "other@example.test" }), 403, "AUTH_FORBIDDEN");
+      });
+
       async function expectRefused(label: string, send: (id: string) => Promise<Response>, status: number, code: string) {
         const card = await seedCard();
         const before = await stored(card.id);
