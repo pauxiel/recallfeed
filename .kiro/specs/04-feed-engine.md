@@ -174,7 +174,12 @@ It is encoded with `btoa` and `TextEncoder`, since `Buffer` does not exist in Wo
 
 **Behavior while the data changes.** The cursor carries values, not a reference to a row, so it still works if its card is later deleted, unpublished or snoozed. A review only ever increases a card's keys (`last_reviewed_at` becomes now and `review_count` goes up), so a card reviewed while a client is paging is never skipped. It may appear again on a later page.
 
-**Privacy note.** The cursor carries the last item's `reviewCount` (for `importance`) and effective time (for both). Public responses omit `reviewCount` and `lastReviewedAt`, and a public cursor reveals them for one item per page. Whether to protect this, for example by encrypting cursors, is an open decision recorded in the Phase 4 handoff.
+**Privacy: accepted disclosure (decided 2026-11-20).** A cursor is opaque in the sense that clients must not parse it, build it, or rely on its format. It is **not secret**: anyone can base64url-decode it. A public cursor therefore reveals, for one card per page (the last card of each page that has a `nextCursor`):
+
+- its **effective time**, `lastReviewedAt ?? createdAt` in whole milliseconds, under both strategies. `createdAt` is public, so a value that differs from it shows that the card has been reviewed and when it was last reviewed;
+- its **`reviewCount`**, under `importance` only.
+
+Public card responses omit `reviewCount` and `lastReviewedAt`, so the cursor discloses something the response body does not. This disclosure is **accepted**: cursors are not encrypted, and the pagination contract above stays as it is. The cursor carries nothing else. It has no `savedAt`, `snoozedUntil`, `isPublished` or content. A forged cursor only changes where a page starts: the published and snooze filters still apply, so it cannot reach an unpublished card. A deployment that cannot accept this disclosure needs a different cursor design. That would be a separate, reviewed change.
 
 **Strategy selection.** `DEFAULT_RESURFACING_STRATEGY` chooses the strategy. Unset or blank means `recency`, which keeps the Phase 2 order. `importance` is the other accepted value. Any other value, including `due_review`, is a configuration error that makes `GET /feed` return a generic 500.
 

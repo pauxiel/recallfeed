@@ -49,6 +49,10 @@ function fromBase64Url(text: string): string {
  * unpadded base64url of `{"v":1,"s":<strategy>,"k":[<keys>],"id":<uuid>}`. Works in Workers, where
  * `Buffer` does not exist.
  *
+ * Opaque does not mean secret: the cursor is not encrypted. For public requests it discloses `item`'s
+ * effective time and, under `importance`, its `reviewCount`, which public card responses omit. This is an
+ * accepted disclosure (Spec 04 clarification); do not put any other field in the keys.
+ *
  * @param strategy - The strategy the page was read in.
  * @param item - The last item of the page.
  * @returns The cursor for the next page.

@@ -56,11 +56,18 @@ every card appears once while paging, even when many tie:
 | `recency` (default) | effective time ascending (`lastReviewedAt ?? createdAt`, in milliseconds), then `id` |
 | `importance` | `reviewCount` ascending, then effective time, then `id` |
 
-The cursor is opaque. It is unpadded base64url of `{"v":1,"s":<strategy>,"k":[<keys>],"id":<uuid>}`
-(Spec 04 clarification). A malformed cursor, or one issued under a different strategy, is
-`400 VALIDATION_CURSOR`. A card reviewed while you page is never skipped, but may appear again later.
-**Note:** a public cursor carries the last card's `reviewCount` (for `importance`) and effective time, which
-public responses otherwise omit.
+The cursor is opaque: do not parse it, build it, or rely on its format. It is unpadded base64url of
+`{"v":1,"s":<strategy>,"k":[<keys>],"id":<uuid>}` (Spec 04 clarification). A malformed cursor, or one issued
+under a different strategy, is `400 VALIDATION_CURSOR`. A card reviewed while you page is never skipped, but
+may appear again later.
+
+**Public cursors disclose review data (accepted).** The cursor is not encrypted, so anyone can decode it. On
+each page that has a `nextCursor`, it reveals two values for the last card on the page. One is the card's effective
+time (`lastReviewedAt ?? createdAt`, in milliseconds), under both strategies. Because `createdAt` is public,
+this shows whether and when the card was last reviewed. The other is the card's `reviewCount`, under
+`importance` only. Public card responses omit `reviewCount` and `lastReviewedAt`, but this disclosure is a
+deliberate, accepted trade-off, and the pagination contract does not change because of it. The cursor carries no
+other card data. A forged cursor only moves where a page starts and cannot reach unpublished cards.
 
 Errors are `{ error, code }`. Notable codes: `AUTH_API_KEY_MISSING` (401), `AUTH_API_KEY_INVALID` (403),
 `CSRF_ORIGIN_MISMATCH` and `CSRF_ORIGIN_MISSING` (403), `VALIDATION_SIZE`, `VALIDATION_LIMIT`,
