@@ -1,0 +1,31 @@
+{
+  "name": "reflection-feed",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "description": "ReflectionFeed: the private RecallFeed demo. Next.js App Router, deployed as one Cloudflare Worker through OpenNext, behind Cloudflare Access.",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "build:worker": "opennextjs-cloudflare build",
+    "preview:local": "opennextjs-cloudflare build && wrangler dev --config wrangler.local.jsonc",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@opennextjs/cloudflare": "^1.20.18",
+    "@recallfeed/api": "workspace:*",
+    "@recallfeed/core": "workspace:*",
+    "@recallfeed/database": "workspace:*",
+    "@recallfeed/feed-engine": "workspace:*",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "wrangler": "4.162.0"
+  }
+}

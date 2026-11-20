@@ -1,0 +1,21 @@
+// LOCAL DEVELOPMENT ONLY: `pnpm --filter reflection-feed preview:local`. Never deploy this file.
+//
+// Same app, entered through worker.local.ts, which acts as the owner for localhost requests only,
+// because Cloudflare Access does not exist locally. Put DATABASE_URL and OWNER_EMAIL in a git-ignored
+// `.dev.vars` file next to this one.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "reflection-feed-local",
+  "main": "./worker.local.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "FEED_VISIBILITY": "private",
+    "APP_NAME": "ReflectionFeed",
+    "DEFAULT_RESURFACING_STRATEGY": "importance"
+  }
+}

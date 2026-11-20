@@ -22,6 +22,8 @@ export default defineConfig([
       "**/.turbo/**",
       "**/.wrangler/**",
       "**/.next/**",
+      "**/.open-next/**",
+      "**/next-env.d.ts",
       "**/.vite/**",
       "**/worker-configuration.d.ts",
     ],
