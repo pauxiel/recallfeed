@@ -7,7 +7,8 @@
       "DOM.Iterable"
     ],
     "types": [
-      "@cloudflare/workers-types"
+      "@cloudflare/workers-types",
+      "node"
     ],
     "jsx": "preserve",
     "allowJs": false,
@@ -37,7 +38,8 @@
     "worker.local.ts",
     "next.config.ts",
     "open-next.config.ts",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "scripts/**/*.ts"
   ],
   "exclude": [
     "node_modules",
