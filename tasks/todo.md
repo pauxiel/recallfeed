@@ -1753,6 +1753,42 @@ Branch `feat/gate3-client-and-card-types` from `cf4be4c` (updated main, not stac
 
 ---
 
+## DevRecall (Nov 23-24 work, started 2026-11-21)
+
+Branch `feat/gate3-dev-recall` from `6d8e2a2` (main after PR #7). Treehouse slot 7, lease
+`0166ffd154abb3ccaf1897545d86a963`. Local only; not pushed or deployed.
+
+- **Opt-in CORS in the shared API (`eada8b7`).** A browser app on Cloudflare Pages reading a Worker on another
+  origin is blocked without CORS, and Spec 09 did not cover it. `CORS_ALLOWED_ORIGINS` (exact origins, or `*`)
+  enables `Access-Control-Allow-Origin` for `GET` and `HEAD` on **public** deployments only. Never credentials,
+  never a preflight answer (so the API key cannot be used from a browser), and a private deployment never sends
+  the headers. 21 tests. 10 of 10 mutants caught.
+- **`apps/dev-recall` (`bb937b7`).** React 19, Vite 8 and Tailwind 4. It reads the public feed through
+  `@recallfeed/client` with no key. Infinite scroll with a "Load more" fallback, an error state with Retry,
+  and note text rendered as text only. The sample content is 12 notes (distributed systems, Rust, TypeScript,
+  Postgres, ADRs). The admin CLI has `import`, `review` and `list`. The seed imports and publishes.
+  19 parser tests. 11 of 11 mutants caught after one survivor led to an added test.
+- **Checked in a real browser** (headless Chrome against the real API Worker and a local database): 10 cards
+  on the first page; with a tall window the second page loads by itself and the feed ends; a stopped API shows
+  the error state with Retry; no stray markup characters. The built bundle contains no key value, no
+  `API_SECRET_KEY` and no database string. Found and fixed one bug this way: code inside bold text was shown
+  with its backticks.
+- **API check, as the browser sees it:** a listed origin gets `Access-Control-Allow-Origin` and `Vary: Origin`;
+  an unlisted origin gets nothing; a public card has exactly the six public fields; an import without a key is
+  401; a wrong key is 403; a preflight asking for `x-api-key` is refused.
+- **Gate:** lint, typecheck and build exit 0 (8 tasks); checker controls 9 of 9; **929 of 929 tests** (46
+  files, none skipped); coverage 96.55/92.96/98.34/96.41.
+- **Spec 09 gap found (decision needed).** A public deployment's `GET /feed` lists published cards only, even
+  with the API key, and `POST /import/markdown` returns no card IDs. So the admin CLI cannot publish a card it
+  just imported, which is the flow the spec describes. The seed publishes through the database. Options for the
+  shared API: (a) return the new card IDs from the import; (b) let a key holder list unpublished cards
+  (`GET /feed?include=unpublished`); (c) a `publish` option on the import. Not changed here.
+- **Not done:** pushed; deployed. DevRecall needs its own Neon database, Worker, Pages project and the user's
+  approval. `summary` and `code_snippet` cards do not exist yet, so DevRecall's imports create `original`
+  cards only.
+
+---
+
 ## Phase 5: Source Management (Tasks 29-30)
 
 **Note:** CSRF/cache protection moved to Task 18 (Phase 2)
