@@ -1702,8 +1702,17 @@ Treehouse slot 5, lease `1f7b074011755e10d955ce140f17c0ee`.
   a forged token. **The user confirmed in a browser:** signed in, the feed shows their email and the 9
   seeded cards; a private window stops at the login; *Mark reviewed* set the count to 1, the card moved down,
   and the change survived a reload.
-- **Not done:** pushed or reviewed (pending authorization); DevRecall; the client package; card-type wiring;
-  styling; save, snooze and import in the UI.
+- **Not done:** DevRecall; the client package; card-type wiring; styling; save, snooze and import in the UI.
+- **Review:** approved at `ac315e8` by the current supervisor, relayed by the user on 2026-11-21. It reviewed
+  `access-token.ts` and `dispatch.ts` directly: authentication runs before any application code, invalid or
+  foreign tokens fail safely, and the API's authorization is unchanged. It read the saved 848-test run
+  rather than rerunning it. No written review file was found in Firstmate's data at the time of recording.
+  The reviewer's name is not recorded because the verdict did not give one.
+- **Decisions:** push and a private draft PR for CI are authorized for this branch only. There is no standing
+  publication permission: each push or draft PR, each merge and each deployment needs its own approval.
+  The current supervisor supervises from now on, and reviews keep going through the notifier. Approved
+  sequence: Nov 22 the client package and highlight cards in imports; Nov 23–24 DevRecall; Nov 25–26 the
+  fuller ReflectionFeed interface.
 
 ---
 
