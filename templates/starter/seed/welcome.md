@@ -10,4 +10,4 @@
 
 ## Make it yours
 
-**Change `wrangler.toml`, replace `public/`, and add your own notes.** The visibility, the ordering and the card types are all settings. Your app and the other RecallFeed apps run the same backend code.
+**Change the settings, replace the page, and add your own notes.** Edit `wrangler.toml`, replace the `public/` folder, and drop Markdown files into `seed/`. The visibility, the ordering and the card types are all settings. Your app and the other RecallFeed apps run the same backend code.
