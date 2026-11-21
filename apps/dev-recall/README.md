@@ -34,6 +34,22 @@ pnpm --filter dev-recall dev:api        # http://127.0.0.1:8788
 pnpm --filter dev-recall dev            # http://127.0.0.1:5173
 ```
 
+## Admin CLI
+
+Run it from `apps/dev-recall` with `API_URL` and `API_SECRET_KEY` set (or in a git-ignored `.env`):
+
+```sh
+pnpm admin import notes.md --name notes            # imports; prints the new cards' IDs, all unpublished
+pnpm admin import notes.md --name notes --publish  # imports and publishes what it created
+pnpm admin publish <card id>                       # publishes one card
+pnpm admin review <card id> unpublished            # any review action
+pnpm admin list --limit 20                         # what the public sees
+```
+
+An import starts every new card unpublished, and the public feed shows only published cards. The import reports
+the IDs of the cards it created. A repeat import creates nothing and reports none, so keep the list if you do not
+publish at once. If `--publish` fails partway it says which cards were published and prints the rest to retry.
+
 ## Settings
 
 - **Browser app (build time):** `VITE_API_URL`, the API's public address. It is the only variable the app
@@ -54,7 +70,3 @@ pnpm --filter dev-recall dev            # http://127.0.0.1:5173
 
 - `summary` needs AI and `code_snippet` has no generator yet, so the configured card types produce
   `original` cards only for now.
-- **The admin CLI cannot publish a card it just imported.** A public deployment's `GET /feed` lists published
-  cards only, even with the API key, and the import response returns no card IDs, so there is no way to learn
-  an unpublished card's ID through the API. `seed` publishes through the database instead. See the review
-  request for the options.

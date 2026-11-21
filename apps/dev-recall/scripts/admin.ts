@@ -1,9 +1,14 @@
 /**
  * DevRecall's admin CLI (Spec 09, option 1): `pnpm --filter dev-recall admin <command>`.
  *
- *   import <file.md> [--name <source name>]   import a Markdown file
- *   review <card id> <action>                 reviewed | saved | unsaved | snoozed | published | unpublished
- *   list [--limit <1-50>]                     print the published cards, as the public sees them
+ *   import <file.md> [--name <name>] [--publish]   import a Markdown file; --publish also publishes the cards it creates
+ *   publish <card id>                              publish one card (the same as: review <card id> published)
+ *   review <card id> <action>                      reviewed | saved | unsaved | snoozed | published | unpublished
+ *   list [--limit <1-50>]                          print the published cards, as the public sees them
+ *
+ * An import starts every new card unpublished, so the public sees nothing until you publish. The import reports
+ * the IDs of the cards it created. Without --publish they are printed so you can publish them; a repeat import
+ * reports none, so keep the list.
  *
  * It runs on your machine, never in the browser. Settings come from the environment, or from a `.env` file
  * in this directory (git-ignored):
@@ -15,6 +20,7 @@ import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { isReviewAction } from "@recallfeed/core";
 import { RecallFeedApiError, createRecallFeedClient } from "@recallfeed/client";
+import { publishCards } from "./publish-cards";
 
 try {
   process.loadEnvFile(".env");
@@ -46,12 +52,32 @@ function needKey(): void {
 try {
   if (command === "import") {
     const file = args[0];
-    if (file === undefined || file.startsWith("--")) fail("Usage: admin import <file.md> [--name <source name>]");
+    if (file === undefined || file.startsWith("--")) fail("Usage: admin import <file.md> [--name <name>] [--publish]");
     needKey();
     const content = await readFile(file, "utf8");
     const name = option(args, "--name") ?? basename(file, ".md");
     const result = await client.importMarkdown(content, { name });
     console.log(`imported "${name}": ${result.notesImported} notes, ${result.feedItemsCreated} new cards`);
+    if (args.includes("--publish")) {
+      const outcome = await publishCards(client, result.feedItemIds, (_id, position) => {
+        console.log(`published ${position} of ${result.feedItemIds.length}`);
+      });
+      if (outcome.failed !== undefined) {
+        const reason = outcome.failed.error instanceof RecallFeedApiError ? `${outcome.failed.error.code} (HTTP ${outcome.failed.error.status})` : "an unexpected error";
+        console.error(`could not publish ${outcome.failed.id}: ${reason}`);
+        const remaining = [outcome.failed.id, ...outcome.notAttempted];
+        fail(`${outcome.published.length} published, ${remaining.length} not. Publish the rest with: admin publish <id>\n${remaining.join("\n")}`);
+      }
+    } else if (result.feedItemIds.length > 0) {
+      console.log("new cards, not yet published (publish one with: admin publish <id>):");
+      for (const id of result.feedItemIds) console.log(id);
+    }
+  } else if (command === "publish") {
+    const id = args[0];
+    if (id === undefined) fail("Usage: admin publish <card id>");
+    needKey();
+    const result = await client.review(id, "published");
+    console.log(`published: ${result.id}`);
   } else if (command === "review") {
     const [id, action] = args;
     if (id === undefined || action === undefined || !isReviewAction(action)) {
@@ -68,7 +94,7 @@ try {
     }
     console.log(page.nextCursor === null ? "(end of feed)" : "(more cards: use a larger --limit)");
   } else {
-    fail("Commands: import <file.md> [--name <name>] | review <card id> <action> | list [--limit <n>]");
+    fail("Commands: import <file.md> [--name <name>] [--publish] | publish <card id> | review <card id> <action> | list [--limit <n>]");
   }
 } catch (error) {
   // Print the API's message and code only. The key is never part of either.
