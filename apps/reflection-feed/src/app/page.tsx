@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { requestFeed } from "../feed";
+import { markReviewed } from "./actions";
 
 // Every request reads the owner's live feed; nothing is prerendered or cached.
 export const dynamic = "force-dynamic";
@@ -28,6 +29,10 @@ export default async function FeedPage(): Promise<ReactNode> {
                 {item.cardType} · reviewed {item.reviewCount} times
               </small>
               <p style={{ whiteSpace: "pre-wrap" }}>{item.content}</p>
+              <form action={markReviewed}>
+                <input type="hidden" name="id" value={item.id} />
+                <button type="submit">Mark reviewed</button>
+              </form>
             </li>
           ))}
         </ul>
