@@ -19,6 +19,6 @@ DEFAULT_CARD_TYPES = "original,summary,code_snippet"
 # Oldest first: notes resurface in the order they were last seen.
 DEFAULT_RESURFACING_STRATEGY = "recency"
 SNOOZE_DEFAULT_HOURS = "168"
-# The browser origins that may read the feed: the Cloudflare Pages address of the DevRecall app. Set it
-# when the Pages project exists, for example "https://dev-recall.pages.dev". Empty means no browser app.
-CORS_ALLOWED_ORIGINS = ""
+# The browser origins that may read the feed: the Cloudflare Pages address of the DevRecall app (exact origin,
+# no trailing slash). Empty would mean no browser app.
+CORS_ALLOWED_ORIGINS = "https://dev-recall.pages.dev"
