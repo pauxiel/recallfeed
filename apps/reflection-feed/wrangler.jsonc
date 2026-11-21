@@ -1,9 +1,16 @@
 // ReflectionFeed: one Worker serving the Next.js frontend and the shared RecallFeed API on one origin.
 //
-// Secrets (never in this file): `wrangler secret put DATABASE_URL`. Everything else below is a plain var.
+// Set per deployment with `wrangler secret put <NAME>`, never in this file (they identify one person's
+// deployment, and DATABASE_URL is a credential):
+//   DATABASE_URL        the Neon connection string
+//   OWNER_EMAIL         the only email allowed in
+//   ACCESS_TEAM_DOMAIN  https://<team-name>.cloudflareaccess.com, exactly: no trailing slash
+//   ACCESS_AUD          the AUD tag of the Access application protecting this Worker
+// Until all of them are set, every request is refused with a generic 500 (fail closed).
+//
 // Cloudflare Access must protect this Worker ("Protect this Worker behind Access", Worker level), with a
-// policy allowing only OWNER_EMAIL. The Worker verifies the Access token itself (see worker.ts), because
-// Cloudflare does not pass ctx.access to a Worker with Static Assets, and OpenNext always uses them.
+// policy allowing only OWNER_EMAIL. The Worker verifies the Access token itself (see src/dispatch.ts),
+// because Cloudflare does not pass ctx.access to a Worker with Static Assets, and OpenNext always uses them.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "reflection-feed",
@@ -22,12 +29,6 @@
     // The shared API's private mode: every route requires the owner.
     "FEED_VISIBILITY": "private",
     "APP_NAME": "ReflectionFeed",
-    "DEFAULT_RESURFACING_STRATEGY": "importance",
-    // Set before the first deploy. The owner is the only email Access and the Worker let in.
-    "OWNER_EMAIL": "",
-    // https://<team-name>.cloudflareaccess.com, exactly: no trailing slash.
-    "ACCESS_TEAM_DOMAIN": "",
-    // The AUD tag of the Access application that protects this Worker (Access > Applications > Edit).
-    "ACCESS_AUD": ""
+    "DEFAULT_RESURFACING_STRATEGY": "importance"
   }
 }
