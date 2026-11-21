@@ -62,24 +62,44 @@ Static Assets, and OpenNext always uses them. See `.kiro/steering/technology-dec
 
 ## Deploy DevRecall (public, React + Vite on Cloudflare Pages)
 
-DevRecall is two deployments: the API Worker (the same shared code as every deployment) and the React app.
-Not yet run live; these are the planned steps, to be corrected after the first deployment.
+DevRecall is two Cloudflare deployments in the same account, plus its own Neon database: the API Worker (the same
+shared code as every deployment, as `dev-recall-api`) and the React app (a Pages project, `dev-recall`). No Zero Trust
+or Access is involved, because the feed is public and writes need the API key. These steps were run for the first
+deployment on 2026-11-21.
 
-1. **Neon.** A second project, separate from ReflectionFeed's. Copy the direct connection string.
-2. **Migrate and seed**, as in the ReflectionFeed steps, then `pnpm --filter dev-recall seed`
-   (it imports the sample notes and publishes them).
-3. **API Worker.** In `apps/dev-recall`: `pnpm exec wrangler deploy`, then `pnpm exec wrangler secret put DATABASE_URL`
-   and `pnpm exec wrangler secret put API_SECRET_KEY` (pick a long random key and keep it to yourself).
-   No Cloudflare Access: public reads need none, and writes need the key.
-4. **React app.** Build with the Worker's address: `VITE_API_URL=https://dev-recall-api.<you>.workers.dev pnpm --filter dev-recall build`,
-   then create a Cloudflare Pages project and upload `apps/dev-recall/dist`.
-5. **CORS.** Put the Pages address in `CORS_ALLOWED_ORIGINS` in `apps/dev-recall/wrangler.toml` (exact origin, no
-   trailing slash), then `wrangler deploy` again. Without it the browser blocks the app's reads.
-6. **Check.** The Pages address shows the feed. A write without the key is 401. No file in the build contains
-   the key.
+1. **Neon.** A **second** project, separate from ReflectionFeed's. Never reuse ReflectionFeed's database: DevRecall is
+   public. Copy the direct connection string (no `-pooler` in the host).
+2. **Migrate and seed.** Enter these one at a time (see the ReflectionFeed steps for why):
+   ```sh
+   read -s "DATABASE_URL?Paste the DEVRECALL Neon connection string: "
+   export DATABASE_URL
+   pnpm --filter @recallfeed/database db:migrate     # a new database prints: applied 001_initial.sql
+   pnpm --filter dev-recall seed                      # imports 12 notes and publishes them
+   unset DATABASE_URL
+   ```
+   If `db:migrate` says `0 applied, 1 skipped`, that is an already-migrated database. Stop before the seed.
+3. **Pages project first,** because its address goes into the API's CORS setting. In `apps/dev-recall`:
+   `pnpm exec wrangler pages project create dev-recall --production-branch main` (the address is `https://dev-recall.pages.dev`
+   if the name is free).
+4. **API Worker.** Put the Pages address in `CORS_ALLOWED_ORIGINS` in `apps/dev-recall/wrangler.toml` (exact origin, no
+   trailing slash), then `pnpm exec wrangler deploy`. Until the secrets exist it answers reads with a generic 500 and
+   refuses writes.
+5. **Secrets.** `pnpm exec wrangler secret put DATABASE_URL` and paste the string. For the admin key, generate it and send
+   it to both places without printing it: `KEY=$(openssl rand -hex 32)`, pipe `$KEY` into
+   `pnpm exec wrangler secret put API_SECRET_KEY`, and write `API_URL=<the Worker address>` and `API_SECRET_KEY=$KEY` to
+   `apps/dev-recall/.env` (git-ignored; the admin CLI reads it).
+6. **The app.** Build against the Worker's address and upload:
+   ```sh
+   VITE_API_URL=https://dev-recall-api.<your-subdomain>.workers.dev pnpm --filter dev-recall build
+   pnpm exec wrangler pages deploy dist --project-name dev-recall --branch main
+   ```
+   Check the build first: `grep -rlF "<your key>" dist` must print nothing.
+7. **Check.** The Pages address shows 12 cards and ends with "end of feed". `pnpm admin import <file>` (in `apps/dev-recall`)
+   imports a card the public cannot see, `pnpm admin publish <id>` makes it visible, and `pnpm admin review <id> unpublished`
+   hides it again. A write without the key is 401 and a wrong key is 403.
 
-The admin CLI (`pnpm --filter dev-recall admin ...`) needs `API_URL` and `API_SECRET_KEY` in its environment. Imported
-cards start unpublished: add `--publish` to publish them in the same step, or `publish <id>` for one card.
+The admin CLI is described in `apps/dev-recall/README.md`. Imported cards start unpublished: add `--publish` to publish
+them in the same step, or `publish <id>` for one card.
 
 ## Local preview (ReflectionFeed)
 
