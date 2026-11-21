@@ -256,6 +256,47 @@ describe.skipIf(databaseUrl === "")("FeedEngine (real PostgreSQL through the pro
       const types = await db.query("SELECT card_type FROM feed_items WHERE source_id = $1 ORDER BY card_type", [sourceId]);
       expect(types.map((t) => t.card_type)).toEqual(["highlight", "original"]);
     });
+
+    it("an import with card types creates highlight cards in the same import, only for notes with something to highlight", async () => {
+      const db = testDb();
+      const name = uniqueName("types");
+      const text = `# Quoted ${name}\n\n> held line ${name}\n\nMore text.\n\n# Plain ${name}\n\nNothing to highlight here.`;
+
+      const result = await new FeedEngine(db).importMarkdown(text, { name, cardTypes: ["original", "highlight"] });
+      const cards = await db.query(
+        "SELECT f.card_type, f.content FROM feed_items f JOIN notes n ON n.id = f.note_id WHERE f.source_id = $1 ORDER BY n.title, f.card_type",
+        [result.sourceId],
+      );
+
+      expect(result.feedItemsCreated).toBe(3);
+      expect(cards.map((c) => c.card_type)).toEqual(["original", "highlight", "original"]);
+      expect(cards[1]?.content).toBe(`held line ${name}`);
+    });
+
+    it("re-importing with more card types adds the missing cards to existing notes, once", async () => {
+      const db = testDb();
+      const name = uniqueName("types2");
+      const text = `# One ${name}\n\n> first quote ${name}\n\n# Two ${name}\n\n> second quote ${name}`;
+      const engine = new FeedEngine(db);
+
+      const first = await engine.importMarkdown(text, { name });
+      const second = await engine.importMarkdown(text, { name, cardTypes: ["original", "highlight"] });
+      const third = await engine.importMarkdown(text, { name, cardTypes: ["original", "highlight"] });
+
+      expect([first.feedItemsCreated, second.feedItemsCreated, third.feedItemsCreated]).toEqual([2, 2, 0]);
+      expect(await counts(first.sourceId)).toEqual({ notes: 2, cards: 4 });
+    });
+
+    it("an import with a card type that has no generator is refused before writing anything", async () => {
+      const db = testDb();
+      const name = uniqueName("types3");
+
+      await expect(new FeedEngine(db).importMarkdown(`# A ${name}\n\nBody.`, { name, cardTypes: ["original", "summary"] })).rejects.toMatchObject({
+        code: "VALIDATION_CARD_TYPE",
+      });
+      const sources = await db.query("SELECT count(*)::int AS n FROM sources WHERE name = $1", [name]);
+      expect(sources[0]?.n).toBe(0);
+    });
   });
 
   describe("intermediate feed reads", () => {

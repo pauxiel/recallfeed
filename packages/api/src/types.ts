@@ -23,6 +23,12 @@ export type Env = {
    * `GET /feed` fail with a generic 500.
    */
   DEFAULT_RESURFACING_STRATEGY?: string;
+  /**
+   * The card types an import creates, comma-separated, such as `original,highlight`. Unset means
+   * `original` only, and `original` is always created. Types without a generator yet are skipped. An
+   * unknown name makes the import fail with a generic 500.
+   */
+  DEFAULT_CARD_TYPES?: string;
 };
 
 /** Visibility of the deployment. */

@@ -3,6 +3,7 @@ import { MARKDOWN_MAX_BYTES } from "@recallfeed/connectors";
 import { ValidationError } from "@recallfeed/core";
 import { FeedEngine } from "@recallfeed/feed-engine";
 import { getDb } from "../db";
+import { getImportCardTypes } from "../card-types-config";
 import { csrfProtection } from "../middleware/csrf";
 import { requireWriteAccess } from "../middleware/auth";
 import { decodeUtf8, readBounded } from "../request-body";
@@ -59,12 +60,13 @@ export const importRoutes = new Hono<AppEnv>();
 
 importRoutes.post("/import/markdown", csrfProtection, requireWriteAccess, async (c) => {
   // Authorization has already passed. Nothing below runs for an unauthorized request, and the
-  // body is not read for one.
+  // body is not read for one. The card types are read first, so a misconfigured deployment writes nothing.
+  const cardTypes = getImportCardTypes(c.env);
   const body = await parseBody(c.req.raw);
   const engine = new FeedEngine(getDb(c));
   const result = await engine.importMarkdown(
     body.content,
-    body.name === undefined ? {} : { name: body.name },
+    body.name === undefined ? { cardTypes } : { name: body.name, cardTypes },
   );
   return c.json({
     sourceId: result.sourceId,

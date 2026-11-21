@@ -19,6 +19,22 @@ const GENERATORS: Partial<Record<CardType, CardGenerator>> = {
 };
 
 /**
+ * Refuses card types that have no generator, so nothing is silently skipped.
+ *
+ * @param cardTypes - The requested card types.
+ * @throws ValidationError `VALIDATION_CARD_TYPE` naming the unsupported types.
+ */
+export function assertGeneratableCardTypes(cardTypes: readonly CardType[]): void {
+  const unsupported = cardTypes.filter((type) => GENERATORS[type] === undefined);
+  if (unsupported.length > 0) {
+    throw new ValidationError(
+      `No card generator for: ${unsupported.join(", ")}`,
+      "VALIDATION_CARD_TYPE",
+    );
+  }
+}
+
+/**
  * Creates the missing cards of the given types for every note of a source.
  *
  * Idempotent: a note that already has a card of a type is skipped, and the database's unique index
@@ -36,13 +52,7 @@ export async function generateFeedItems(
   sourceId: string,
   cardTypes: readonly CardType[],
 ): Promise<number> {
-  const unsupported = cardTypes.filter((type) => GENERATORS[type] === undefined);
-  if (unsupported.length > 0) {
-    throw new ValidationError(
-      `No card generator for: ${unsupported.join(", ")}`,
-      "VALIDATION_CARD_TYPE",
-    );
-  }
+  assertGeneratableCardTypes(cardTypes);
   let created = 0;
   for (const type of new Set(cardTypes)) {
     const generate = GENERATORS[type];
