@@ -1,0 +1,11 @@
+{
+  // Source-only check. The client runs in browsers, Workers and Node, so it may use only what all of them
+  // share: fetch, Request, Response, URLSearchParams (the DOM library's types).
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "types": []
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/__tests__/**", "src/**/*.test.ts"]
+}
