@@ -7,8 +7,8 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     // Each package may have a Workers config (vitest.config.ts) and a plain-Node config
-    // (vitest.node.config.ts).
-    projects: ["packages/*/vitest.config.ts", "packages/*/vitest.node.config.ts"],
+    // (vitest.node.config.ts). Demo apps may have a Workers config for their Worker wrapper.
+    projects: ["packages/*/vitest.config.ts", "packages/*/vitest.node.config.ts", "apps/*/vitest.config.ts"],
     coverage: {
       // The Workers pool supports only the istanbul provider.
       provider: "istanbul",
