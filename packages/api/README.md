@@ -33,7 +33,8 @@ claimed: the `due_review` strategy, the Notion import, Inngest, and AI. `GET /fe
 | `PUT /feed/:id/review` | Owner. Same-origin `Origin` required. | `X-API-Key`. |
 
 `POST /import/markdown` takes `text/markdown` (the body is the content) or `application/json`
-(`{ "content": string, "name"?: string }`). It returns `{ sourceId, queued, notesImported, feedItemsCreated }`.
+(`{ "content": string, "name"?: string }`). It returns `{ sourceId, queued, notesImported, feedItemsCreated, feedItemIds }`. `feedItemIds` lists the cards this
+import created, so a caller with write access can publish them (`PUT /feed/:id/review`); a repeat import returns `[]`.
 Content is 10 bytes to 100 KB of UTF-8. The `text/markdown` form always uses the default source; use JSON
 with `name` to import into a named source. The body is read in bounded chunks and authorization is checked
 before any of it is read.

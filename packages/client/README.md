@@ -26,7 +26,7 @@ await admin.importMarkdown(markdown, { name: "notes" });
 | `createRecallFeedClient({ baseUrl, apiKey?, headers?, fetch? })` | `baseUrl` is the API's URL or a same-origin path such as `/api`; a trailing slash is ignored. `apiKey` is sent as `X-API-Key`. |
 | `client.listFeed({ limit?, cursor? })` | `GET /feed`, returning `{ items, nextCursor }`. Use `listFeed<OwnerCard>()` when the caller is the owner or holds the key. |
 | `client.getCard(id)` | `GET /feed/:id`. |
-| `client.importMarkdown(content, { name? })` | `POST /import/markdown` (JSON). Needs write access. |
+| `client.importMarkdown(content, { name? })` | `POST /import/markdown` (JSON). Needs write access. Returns `feedItemIds`, the cards it created, for `review(id, "published")`. A response without `feedItemIds` (an older API) is `CLIENT_BAD_RESPONSE`: keep the client and API on the same version. |
 | `client.review(id, action)` | `PUT /feed/:id/review` with one of the six review actions. Needs write access. |
 | `RecallFeedApiError` | Every failure. It extends core's `RecallFeedError` and has `code` and `status`. |
 | `PublicCard`, `OwnerCard`, `CardPage`, `ImportMarkdownResult`, `ReviewResult` | Response types. Dates are ISO 8601 strings. |

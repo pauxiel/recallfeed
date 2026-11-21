@@ -608,9 +608,18 @@ Content-Type: application/json
   "sourceId": "uuid",
   "queued": false,
   "notesImported": 5,
-  "feedItemsCreated": 5
+  "feedItemsCreated": 5,
+  "feedItemIds": ["uuid", "uuid", "uuid", "uuid", "uuid"]
 }
 ```
+
+**`feedItemIds` (added 2026-11-21).** The IDs of the cards this import created, so the caller can act on them (for
+example publish them with `PUT /feed/:id/review`). Only new cards are listed, never ones that already existed, and
+the list always has `feedItemsCreated` entries, so a repeat import returns `[]`. It is part of the response only a
+caller who passed the write check ever receives; a public `GET /feed` is unchanged. Reason: imported cards start
+unpublished, and a public deployment lists published cards only, so without the IDs a key holder had no way to
+find the cards they had just imported. Listing unpublished cards (`GET /feed?include=unpublished`) was considered
+and deferred until there is a concrete need to find older drafts.
 
 **Error responses:**
 - 400: Content too large, too small, or invalid format

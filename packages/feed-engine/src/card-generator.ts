@@ -35,25 +35,27 @@ export function assertGeneratableCardTypes(cardTypes: readonly CardType[]): void
 }
 
 /**
- * Creates the missing cards of the given types for every note of a source.
+ * Creates the missing cards of the given types for every note of a source, and says which cards it made.
  *
  * Idempotent: a note that already has a card of a type is skipped, and the database's unique index
- * on `(note_id, card_type)` makes a concurrent repeat harmless. A repeat call creates nothing.
+ * on `(note_id, card_type)` makes a concurrent repeat harmless. A repeat call creates nothing, so it
+ * returns an empty list.
  *
  * @param db - A request-scoped client from `createDb`.
  * @param sourceId - The source whose notes get cards.
  * @param cardTypes - The card types to create: "original" or "highlight". A note with nothing to
  * highlight gets no highlight card.
- * @returns How many cards this call created.
+ * @returns The IDs of the cards this call created, in creation order (by card type as requested, then by
+ * note). Cards that already existed are not listed.
  * @throws ValidationError if a requested type has no generator, so nothing is silently skipped.
  */
-export async function generateFeedItems(
+export async function createFeedItems(
   db: DbClient,
   sourceId: string,
   cardTypes: readonly CardType[],
-): Promise<number> {
+): Promise<string[]> {
   assertGeneratableCardTypes(cardTypes);
-  let created = 0;
+  const created: string[] = [];
   for (const type of new Set(cardTypes)) {
     const generate = GENERATORS[type];
     if (generate === undefined) {
@@ -61,7 +63,26 @@ export async function generateFeedItems(
     }
     const missing = await getNotesMissingCardType(db, sourceId, type);
     const cards = missing.map(generate).filter((card): card is NewFeedItem => card !== null);
-    created += (await insertFeedItems(db, cards)).length;
+    for (const card of await insertFeedItems(db, cards)) {
+      created.push(card.id);
+    }
   }
   return created;
+}
+
+/**
+ * Creates the missing cards like {@link createFeedItems}, and returns only how many it created.
+ *
+ * @param db - A request-scoped client from `createDb`.
+ * @param sourceId - The source whose notes get cards.
+ * @param cardTypes - The card types to create.
+ * @returns How many cards this call created.
+ * @throws ValidationError if a requested type has no generator.
+ */
+export async function generateFeedItems(
+  db: DbClient,
+  sourceId: string,
+  cardTypes: readonly CardType[],
+): Promise<number> {
+  return (await createFeedItems(db, sourceId, cardTypes)).length;
 }

@@ -73,5 +73,7 @@ importRoutes.post("/import/markdown", csrfProtection, requireWriteAccess, async 
     queued: result.queued,
     notesImported: result.notesImported,
     feedItemsCreated: result.feedItemsCreated,
+    // Only the caller who just passed the write check sees these. The IDs let it publish what it imported.
+    feedItemIds: result.feedItemIds,
   });
 });
