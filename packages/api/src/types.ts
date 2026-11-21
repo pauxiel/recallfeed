@@ -29,6 +29,12 @@ export type Env = {
    * unknown name makes the import fail with a generic 500.
    */
   DEFAULT_CARD_TYPES?: string;
+  /**
+   * Public deployments only: the origins whose browser apps may read the feed, comma-separated exact
+   * origins such as `https://my-app.pages.dev`, or `*`. Unset means none. Reads only, no credentials;
+   * private deployments never send CORS headers.
+   */
+  CORS_ALLOWED_ORIGINS?: string;
 };
 
 /** Visibility of the deployment. */

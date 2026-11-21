@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cacheControl } from "./middleware/cache";
+import { publicReadCors } from "./middleware/cors";
 import { errorResponse, handleError } from "./middleware/errors";
 import { requestId } from "./middleware/request-id";
 import { injectPublicRequestFlag } from "./middleware/visibility";
@@ -22,6 +23,7 @@ export const app = new Hono<AppEnv>();
 
 app.use("*", requestId);
 app.use("*", cacheControl);
+app.use("*", publicReadCors);
 app.use("*", injectPublicRequestFlag);
 
 app.route("/", importRoutes);
