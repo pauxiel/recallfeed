@@ -114,13 +114,19 @@ Each demo app has its own `wrangler.toml` that configures the Worker name, envir
 
 **Two authentication mechanisms:**
 
-1. **Cloudflare Access** — for human browser access to private deployments. Configured at the Worker level in the Cloudflare dashboard or via the Access API. Provides `ctx.access.getIdentity()` inside the Worker with no JWT parsing code required. Free for up to 50 users.
+1. **Cloudflare Access** — for human browser access to private deployments. Configured at the Worker level in the Cloudflare dashboard or via the Access API. Free for up to 50 users. A Worker without Static Assets can read the signed-in identity from `ctx.access.getIdentity()` with no JWT parsing code. **A Worker with Static Assets cannot** (see the next paragraph).
+
+   **Workers with Static Assets: the identity token is verified in code (decided 2026-11-20).** Cloudflare's documentation states that a Worker with Static Assets runs behind an internal router Worker, and that the router does not pass `ctx.access` on to the user Worker. Access still protects the application. ReflectionFeed is deployed through OpenNext, which always uses Static Assets, so `ctx.access` is undefined there. Its Worker wrapper therefore verifies the `Cf-Access-Jwt-Assertion` header that Access adds to every request it lets through:
+   - the signature is RS256 and is checked against the team's public keys at `<ACCESS_TEAM_DOMAIN>/cdn-cgi/access/certs`, fetched rather than hard-coded, because Access rotates them;
+   - `iss` must equal `ACCESS_TEAM_DOMAIN`, `aud` must contain `ACCESS_AUD`, `exp` must be in the future and `nbf` must not be.
+
+   The wrapper then gives the shared API and Next.js an execution context whose `access.getIdentity()` returns the verified email. The shared API's authorization code is unchanged and still reads identity only from `ctx.access`. The verifier is an app-neutral helper exported by `@recallfeed/api`, and it uses `jose`. Missing configuration fails closed. Any identity the client supplies is ignored. Sources: [Cloudflare Access for Workers](https://developers.cloudflare.com/workers/configuration/cloudflare-access/) and [Validate JWTs](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/).
 
 2. **Static API Key (`X-API-Key` header)** — for programmatic/server-to-server access and protected write operations in public deployments. The key is stored as a Wrangler secret (`API_SECRET_KEY`). Never exposed in browser JavaScript.
 
 **Inngest + Cloudflare Access coexistence:** When Cloudflare Access is enabled at the Worker level, it blocks all inbound requests — including Inngest Cloud callbacks. The solution is a **separate path-based Access application** scoped to exact path `/api/inngest` with a `Bypass + Everyone` policy. This allows Inngest Cloud to reach the endpoint while the rest of the Worker remains protected. Inngest's signing key validation (`INNGEST_SIGNING_KEY`) still runs inside the handler, providing cryptographic proof of origin.
 
-**ReflectionFeed same-origin deployment:** Next.js application deployed via `@opennextjs/cloudflare` adapter as a single Worker. Frontend and API share the same domain (e.g., `reflection.example.com`). No cross-domain cookie forwarding required. Worker wrapper validates owner via `ctx.access.getIdentity()` before dispatching to OpenNext handler.
+**ReflectionFeed same-origin deployment:** Next.js application deployed via `@opennextjs/cloudflare` adapter as a single Worker. Frontend and API share the same domain (e.g., `reflection.example.com`). No cross-domain cookie forwarding required. The Worker wrapper verifies the Access token and checks the owner (see above) before dispatching to the Hono app or the OpenNext handler.
 
 ---
 

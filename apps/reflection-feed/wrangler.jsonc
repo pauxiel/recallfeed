@@ -1,0 +1,34 @@
+// ReflectionFeed: one Worker serving the Next.js frontend and the shared RecallFeed API on one origin.
+//
+// Set per deployment with `wrangler secret put <NAME>`, never in this file (they identify one person's
+// deployment, and DATABASE_URL is a credential):
+//   DATABASE_URL        the Neon connection string
+//   OWNER_EMAIL         the only email allowed in
+//   ACCESS_TEAM_DOMAIN  https://<team-name>.cloudflareaccess.com, exactly: no trailing slash
+//   ACCESS_AUD          the AUD tag of the Access application protecting this Worker
+// Until all of them are set, every request is refused with a generic 500 (fail closed).
+//
+// Cloudflare Access must protect this Worker ("Protect this Worker behind Access", Worker level), with a
+// policy allowing only OWNER_EMAIL. The Worker verifies the Access token itself (see src/dispatch.ts),
+// because Cloudflare does not pass ctx.access to a Worker with Static Assets, and OpenNext always uses them.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "reflection-feed",
+  // The wrapper in worker.ts checks the owner, then dispatches to the API or to OpenNext's handler.
+  "main": "./worker.ts",
+  "compatibility_date": "2026-10-01",
+  // nodejs_compat: required by OpenNext. global_fetch_strictly_public: OpenNext's recommended default.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  // Smart Placement must stay off: Cloudflare users report it drops the Access context.
+  "observability": { "enabled": true },
+  "vars": {
+    // The shared API's private mode: every route requires the owner.
+    "FEED_VISIBILITY": "private",
+    "APP_NAME": "ReflectionFeed",
+    "DEFAULT_RESURFACING_STRATEGY": "importance"
+  }
+}

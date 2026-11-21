@@ -1451,8 +1451,8 @@ Before this phase: 422 tests. This phase added 220, none skipped.
 - [x] Implemented (commit: `c3234ab` (with the ordering settled in `fedb23d`))
 - [x] Verified (self-tested: 2026-11-20, Node 22.23.3, pnpm 10.18.3: `packages/feed-engine/src/strategies/recency.ts` implements core's `IResurfacingStrategy`. `rank` drops cards snoozed past `now` and sorts by effective time (`lastReviewedAt ?? createdAt`, whole milliseconds) ascending, then `id` ascending; the input array is not changed. Unit tests in `recency.test.ts` (no database) include Task 25's three-timestamps case, the `createdAt` fallback, pre-1970 times, the snooze boundary, and the `id` tie-break matching PostgreSQL's UUID order. **Deviation:** a final `id` tie-break is added, which the task does not list, so the order is total; the Spec 04 clarification records it. See the Phase 4 Execution Record.)
 - [x] Reviewed (**Firstmate, directly**, 2026-11-20, **APPROVE** at `5f684102c42e5d25080ff9eef3a731cff8b20a4f`. The separate read-only reviewer (`openai/gpt-6-astra`) could not authenticate and produced no report (`firstmate/data/recallfeed-phase4-review/report.md`), so Firstmate made the verdict itself. **This is not an independent written Grok review.** The verdict accepts the public cursor disclosure: cursors are not encrypted and the pagination contract is unchanged. Wiring highlight cards into imports is a separate follow-up. The documentation addendum follows in this branch. See the Phase 4 Execution Record.)
-- [ ] Pushed (in progress: `origin/feat/gate2-phase4-strategies-pagination` first pushed at `b10a7fba7bfbb866050cc2aa1e7909b6bae3a73a`, non-forced, private draft PR #5, https://github.com/pauxiel/recallfeed/pull/5. CI on that head failed with 4 test timeouts, https://github.com/pauxiel/recallfeed/actions/runs/44801076724; the test-only fix `09fcbc7` follows. Not checked until CI passes on the final head. See the Phase 4 Execution Record.)
-- [ ] Merged (not merged)
+- [x] Pushed (`origin/feat/gate2-phase4-strategies-pagination` = `44cabaef06ea80873f807dcd802344be03e50d97`, non-forced, private PR #5. The first CI run on `b10a7fb` failed with 4 test timeouts and was fixed by the test-only `09fcbc7`. CI on the final head passed: https://github.com/pauxiel/recallfeed/actions/runs/44806346354.)
+- [x] Merged (PR #5 merged 2026-11-20T22:08:18Z with a merge commit `bdde8c377c214cbac7a61d0cbbb014aa33dc7da2`, parents `9856fd2` and `44cabae`. Post-merge CI on `main` passed: https://github.com/pauxiel/recallfeed/actions/runs/44826389214.)
 
 **Files created:**
 - `packages/feed-engine/src/strategies/recency.ts`
@@ -1488,8 +1488,8 @@ Before this phase: 422 tests. This phase added 220, none skipped.
 - [x] Implemented (commit: `c3234ab`)
 - [x] Verified (self-tested: 2026-11-20: `packages/feed-engine/src/strategies/importance.ts` implements `IResurfacingStrategy`: `reviewCount` ascending, then effective time ascending, then `id`, with snoozed cards left out. There is no score. Unit tests in `importance.test.ts` include Task 26's `[0, 1, 3]` and snooze cases, the tie-breaks, a test that one more review always outranks any time difference, and `getStrategy` refusing `due_review` and inherited property names. Strategy and lookup mutation checks: 12 mutants, all caught. See the Phase 4 Execution Record.)
 - [x] Reviewed (**Firstmate, directly**, 2026-11-20, **APPROVE** at `5f684102c42e5d25080ff9eef3a731cff8b20a4f`. The separate read-only reviewer (`openai/gpt-6-astra`) could not authenticate and produced no report (`firstmate/data/recallfeed-phase4-review/report.md`), so Firstmate made the verdict itself. **This is not an independent written Grok review.** The verdict accepts the public cursor disclosure: cursors are not encrypted and the pagination contract is unchanged. Wiring highlight cards into imports is a separate follow-up. The documentation addendum follows in this branch. See the Phase 4 Execution Record.)
-- [ ] Pushed (in progress: `origin/feat/gate2-phase4-strategies-pagination` first pushed at `b10a7fba7bfbb866050cc2aa1e7909b6bae3a73a`, non-forced, private draft PR #5, https://github.com/pauxiel/recallfeed/pull/5. CI on that head failed with 4 test timeouts, https://github.com/pauxiel/recallfeed/actions/runs/44801076724; the test-only fix `09fcbc7` follows. Not checked until CI passes on the final head. See the Phase 4 Execution Record.)
-- [ ] Merged (not merged)
+- [x] Pushed (`origin/feat/gate2-phase4-strategies-pagination` = `44cabaef06ea80873f807dcd802344be03e50d97`, non-forced, private PR #5. The first CI run on `b10a7fb` failed with 4 test timeouts and was fixed by the test-only `09fcbc7`. CI on the final head passed: https://github.com/pauxiel/recallfeed/actions/runs/44806346354.)
+- [x] Merged (PR #5 merged 2026-11-20T22:08:18Z with a merge commit `bdde8c377c214cbac7a61d0cbbb014aa33dc7da2`, parents `9856fd2` and `44cabae`. Post-merge CI on `main` passed: https://github.com/pauxiel/recallfeed/actions/runs/44826389214.)
 
 **Files created:**
 - `packages/feed-engine/src/strategies/importance.ts`
@@ -1530,8 +1530,8 @@ Before this phase: 422 tests. This phase added 220, none skipped.
 - [x] Implemented (commit: `fedb23d` (ordering and cursor shape, a Spec 04 clarification), `821e3ae` (keyset query), `5107213` (cursor, engine page, `GET /feed`))
 - [x] Verified (self-tested: 2026-11-20: the cursor is base64url `{v:1, s, k:[keys], id}`, carrying **every ordering key plus `id`**, never a scalar. Recency's `k` is `[effective ms]`; importance's is `[reviewCount, effective ms]`. The next page is a strict SQL row comparison. **Tie tests:** 9 cards tying exactly, and 12 cards tying on count and on time including below the millisecond, cross page sizes 1 to 5 with each card returned exactly once. Whole-table walks in both orders, through the database query, the engine and the API, return each card once and match an independently written sort and `rank()`. Integration tests confirm a recency cursor holds the timestamp and an importance cursor holds `reviewCount` and the timestamp. A cursor from another strategy, a malformed or forged cursor, or one with extra fields is `400 VALIDATION_CURSOR`. Mutation checks: 9 query, 10 page, route and config, all caught (two survivors led to added tests). **Deviations:** (1) the codec is in `packages/feed-engine/src/cursor.ts`, not `packages/api/src/utils/cursor.ts`, because the keys come from the strategies there and the engine returns `nextCursor` as Spec 04 describes; (2) times are compared at millisecond precision so the database, `rank()` and the cursor agree exactly; (3) strategy selection is a new optional variable, `DEFAULT_RESURFACING_STRATEGY` (default `recency`); (4) three Phase 2 API tests that pinned the temporary 'no cursor' behavior now assert the new contract. See the Phase 4 Execution Record.)
 - [x] Reviewed (**Firstmate, directly**, 2026-11-20, **APPROVE** at `5f684102c42e5d25080ff9eef3a731cff8b20a4f`. The separate read-only reviewer (`openai/gpt-6-astra`) could not authenticate and produced no report (`firstmate/data/recallfeed-phase4-review/report.md`), so Firstmate made the verdict itself. **This is not an independent written Grok review.** The verdict accepts the public cursor disclosure: cursors are not encrypted and the pagination contract is unchanged. Wiring highlight cards into imports is a separate follow-up. The documentation addendum follows in this branch. See the Phase 4 Execution Record.)
-- [ ] Pushed (in progress: `origin/feat/gate2-phase4-strategies-pagination` first pushed at `b10a7fba7bfbb866050cc2aa1e7909b6bae3a73a`, non-forced, private draft PR #5, https://github.com/pauxiel/recallfeed/pull/5. CI on that head failed with 4 test timeouts, https://github.com/pauxiel/recallfeed/actions/runs/44801076724; the test-only fix `09fcbc7` follows. Not checked until CI passes on the final head. See the Phase 4 Execution Record.)
-- [ ] Merged (not merged)
+- [x] Pushed (`origin/feat/gate2-phase4-strategies-pagination` = `44cabaef06ea80873f807dcd802344be03e50d97`, non-forced, private PR #5. The first CI run on `b10a7fb` failed with 4 test timeouts and was fixed by the test-only `09fcbc7`. CI on the final head passed: https://github.com/pauxiel/recallfeed/actions/runs/44806346354.)
+- [x] Merged (PR #5 merged 2026-11-20T22:08:18Z with a merge commit `bdde8c377c214cbac7a61d0cbbb014aa33dc7da2`, parents `9856fd2` and `44cabae`. Post-merge CI on `main` passed: https://github.com/pauxiel/recallfeed/actions/runs/44826389214.)
 
 **Files created:**
 - `packages/api/src/utils/cursor.ts`
@@ -1564,8 +1564,8 @@ Before this phase: 422 tests. This phase added 220, none skipped.
 - [x] Implemented (commit: `302cbe5`)
 - [x] Verified (self-tested: 2026-11-20: `packages/feed-engine/src/generators/highlight.ts` is registered in the card generator. The rule: the first blockquote; otherwise every `**strong**`, `__strong__`, `*em*` and `_em_` span in order, without repeats; otherwise no card. Fenced and inline code are never highlights. `highlight.test.ts` has 29 unit tests, including Task 28's `> quote` case, and the database tests show highlight feed items are created once, none for a plain note, and alongside original cards. Mutation checks: 15 mutants, all caught (one survivor led to an added test). **Deviations:** (1) Spec 04's sketch falls back to the first long paragraph; here a note with no quote or emphasis gets no highlight card, because that fallback would mostly repeat the original card; (2) **the import still creates only `original` cards**: nothing reads `DEFAULT_CARD_TYPES` yet, so highlights are created only when `generateFeedItems(..., ["highlight"])` is called. See the Phase 4 Execution Record.)
 - [x] Reviewed (**Firstmate, directly**, 2026-11-20, **APPROVE** at `5f684102c42e5d25080ff9eef3a731cff8b20a4f`. The separate read-only reviewer (`openai/gpt-6-astra`) could not authenticate and produced no report (`firstmate/data/recallfeed-phase4-review/report.md`), so Firstmate made the verdict itself. **This is not an independent written Grok review.** The verdict accepts the public cursor disclosure: cursors are not encrypted and the pagination contract is unchanged. Wiring highlight cards into imports is a separate follow-up. The documentation addendum follows in this branch. See the Phase 4 Execution Record.)
-- [ ] Pushed (in progress: `origin/feat/gate2-phase4-strategies-pagination` first pushed at `b10a7fba7bfbb866050cc2aa1e7909b6bae3a73a`, non-forced, private draft PR #5, https://github.com/pauxiel/recallfeed/pull/5. CI on that head failed with 4 test timeouts, https://github.com/pauxiel/recallfeed/actions/runs/44801076724; the test-only fix `09fcbc7` follows. Not checked until CI passes on the final head. See the Phase 4 Execution Record.)
-- [ ] Merged (not merged)
+- [x] Pushed (`origin/feat/gate2-phase4-strategies-pagination` = `44cabaef06ea80873f807dcd802344be03e50d97`, non-forced, private PR #5. The first CI run on `b10a7fb` failed with 4 test timeouts and was fixed by the test-only `09fcbc7`. CI on the final head passed: https://github.com/pauxiel/recallfeed/actions/runs/44806346354.)
+- [x] Merged (PR #5 merged 2026-11-20T22:08:18Z with a merge commit `bdde8c377c214cbac7a61d0cbbb014aa33dc7da2`, parents `9856fd2` and `44cabae`. Post-merge CI on `main` passed: https://github.com/pauxiel/recallfeed/actions/runs/44826389214.)
 
 **Files created:**
 - `packages/feed-engine/src/generators/highlight.ts`
@@ -1674,6 +1674,45 @@ I agree with both decisions, so there is no disagreement to record.
 - [x] Strategy-dependent pagination cursors work (timestamp for recency, `reviewCount` plus tie-break keys for importance; no computed score)
 - [x] Highlight card generator creates cards (when called with `highlight`; normal imports do not request it yet, which is a separate follow-up)
 - [x] All feed-engine tests pass
+
+---
+
+## Gate 3 Deployment Spike: ReflectionFeed (2026-11-20)
+
+Phase 5 is **paused** (not cut) by the user's decision. The spike tests the riskiest unverified path:
+hosted Neon, Cloudflare Access and OpenNext. Branch `feat/gate3-reflection-feed-spike` from `bdde8c3`.
+Treehouse slot 5, lease `1f7b074011755e10d955ce140f17c0ee`.
+
+- **Blocker found and resolved.** Cloudflare does not pass `ctx.access` to a Worker with Static Assets, and
+  OpenNext always uses them. The user approved option A: the Worker verifies the Access token itself, and
+  the shared API's authorization is unchanged. The steering file and Spec 08 were updated first (`289b63e`).
+- **Built.**
+  - `@recallfeed/api/access` (`f4351e8`): 37 tests, 13 of 13 mutants caught.
+  - The minimal Next.js 16 app (`ca71f4b`).
+  - The tested owner-only wrapper (`f406146`): 14 tests, 5 of 5 mutants caught.
+  - Secrets moved out of the committed config (`5ca2d0a`).
+  - The seed script and sample content (`fe12ed7`).
+  - A *Mark reviewed* button (`9b1e595`).
+  - `docs/setup.md`, as rough notes.
+- **Local gate** (at `f406146`): lint, typecheck and build exit 0 (6 tasks); checker controls 9 of 9;
+  **848 of 848 tests** (42 files, none skipped), coverage 96.29/92.07/98.17/96.15. The first run failed in 9
+  places because a closed lid slept the Mac (power log: clamshell sleep 18:27:47). The rerun passed.
+- **Deployed:** https://reflection-feed.obayuwanap.workers.dev (latest version `3c7880e9`). Without settings it
+  refused everything with 500. A signed-out visitor is redirected to the Access login, including one sending
+  a forged token. **The user confirmed in a browser:** signed in, the feed shows their email and the 9
+  seeded cards; a private window stops at the login; *Mark reviewed* set the count to 1, the card moved down,
+  and the change survived a reload.
+- **Not done:** DevRecall; the client package; card-type wiring; styling; save, snooze and import in the UI.
+- **Review:** approved at `ac315e8` by the current supervisor, relayed by the user on 2026-11-21. It reviewed
+  `access-token.ts` and `dispatch.ts` directly: authentication runs before any application code, invalid or
+  foreign tokens fail safely, and the API's authorization is unchanged. It read the saved 848-test run
+  rather than rerunning it. No written review file was found in Firstmate's data at the time of recording.
+  The reviewer's name is not recorded because the verdict did not give one.
+- **Decisions:** push and a private draft PR for CI are authorized for this branch only. There is no standing
+  publication permission: each push or draft PR, each merge and each deployment needs its own approval.
+  The current supervisor supervises from now on, and reviews keep going through the notifier. Approved
+  sequence: Nov 22 the client package and highlight cards in imports; Nov 23–24 DevRecall; Nov 25–26 the
+  fuller ReflectionFeed interface.
 
 ---
 

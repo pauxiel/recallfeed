@@ -85,6 +85,33 @@ A public request gets the same 404 for a missing, malformed, and unpublished ID.
 - **Public redaction is an allow-list**: `id`, `noteId`, `cardType`, `content`, `isAiGenerated`, `createdAt`.
   A column added later stays private until someone adds it deliberately.
 
+## Access for Workers with Static Assets (`@recallfeed/api/access`)
+
+Cloudflare does not pass `ctx.access` to a Worker with Static Assets, which includes every OpenNext
+deployment. Such a Worker's own entry point verifies the Access token, then dispatches with the identity:
+
+```ts
+import { authorizeAccessOwner, withAccessIdentity } from "@recallfeed/api/access";
+
+const result = await authorizeAccessOwner(request, env);
+if (!result.ok) return result.response;
+return app.fetch(request, env, withAccessIdentity(ctx, result.identity));
+```
+
+- `authorizeAccessOwner(request, env)` verifies `Cf-Access-Jwt-Assertion`. The token must be RS256 and
+  signed by a key from `<ACCESS_TEAM_DOMAIN>/cdn-cgi/access/certs` (fetched and cached, because Access
+  rotates them). It also checks `iss`, `aud` against `ACCESS_AUD`, a required `exp`, `nbf`, and the email
+  against `OWNER_EMAIL`. The result is 401 `AUTH_REQUIRED` for a missing, invalid or oversized (over 8 KB)
+  token, 403 `AUTH_FORBIDDEN` for someone else, and 500 `AUTH_NOT_CONFIGURED` for missing or malformed
+  settings or keys that cannot be fetched. Every refusal is JSON with `Cache-Control: private, no-store`,
+  and tokens are never logged or echoed.
+- `withAccessIdentity(ctx, identity)` returns `ctx` with `access.getIdentity()` reporting that identity.
+  Use it only with a result from `authorizeAccessOwner`. The API's authorization is unchanged.
+- **Settings**, read by the calling Worker, not by this API's Worker:
+  - `ACCESS_TEAM_DOMAIN`: exactly `https://<team-name>.cloudflareaccess.com`, with no trailing slash or path.
+  - `ACCESS_AUD`: the Access application's AUD tag.
+  - `OWNER_EMAIL`.
+
 ## Local development
 
 `wrangler dev` has no Cloudflare Access, so the local configuration runs the public mode. Private mode is

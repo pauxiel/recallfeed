@@ -1,0 +1,49 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "@cloudflare/workers-types",
+      "node"
+    ],
+    "jsx": "preserve",
+    "allowJs": false,
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@recallfeed/api/access": [
+        "../../packages/api/src/access-token.ts"
+      ],
+      "@recallfeed/api/app": [
+        "../../packages/api/src/app.ts"
+      ],
+      "@recallfeed/*": [
+        "../../packages/*/src/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "worker.ts",
+    "worker.local.ts",
+    "next.config.ts",
+    "open-next.config.ts",
+    ".next/types/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".open-next",
+    ".next"
+  ]
+}

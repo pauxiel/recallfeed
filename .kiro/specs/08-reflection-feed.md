@@ -1,8 +1,8 @@
 # Spec 08 — ReflectionFeed (Next.js Demo)
 
 **Application:** `apps/reflection-feed`
-**Status:** Awaiting review
-**Depends on:** `@recallfeed/api`, `@recallfeed/client`, `@recallfeed/core`
+**Status:** Awaiting review. Authentication design and versions updated 2026-11-20 (deployment spike).
+**Depends on:** `@recallfeed/api`, `@recallfeed/feed-engine`, `@recallfeed/database`, `@recallfeed/core` (`@recallfeed/client` is for browser or external callers; server code calls the shared packages directly)
 
 ---
 
@@ -27,7 +27,7 @@ ReflectionFeed is a private, authenticated personal knowledge feed for spiritual
 {
   "name": "reflection-feed",
   "main": "./worker.ts",
-  "compatibility_date": "2024-09-23",
+  "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./.open-next/assets",
@@ -47,6 +47,8 @@ ReflectionFeed is a private, authenticated personal knowledge feed for spiritual
 # Required
 FEED_VISIBILITY=private
 OWNER_EMAIL=you@example.com
+ACCESS_TEAM_DOMAIN=https://<your-team-name>.cloudflareaccess.com
+ACCESS_AUD=<the Access application's AUD tag>
 DATABASE_URL=<secret>
 
 # Optional
@@ -74,17 +76,19 @@ INNGEST_SIGNING_KEY=<secret>
 
 ### Framework
 
-Next.js 15 with App Router, deployed via `@opennextjs/cloudflare` adapter as a single Worker.
+Next.js 16 with App Router (16.4.5 or later, the range `@opennextjs/cloudflare` 1.20 supports), deployed via `@opennextjs/cloudflare` adapter as a single Worker.
 
 ### Authentication Flow
 
 1. User visits `reflection.example.com`.
 2. Cloudflare Access intercepts, redirects to identity provider.
-3. After authentication, Access sets `CF_Authorization` cookie.
-4. Worker wrapper validates owner via `ctx.access.getIdentity()` before dispatching.
-5. Worker routes `/api/*` (except `/api/inngest`) to shared Hono app.
+3. After authentication, Access sets `CF_Authorization` cookie and adds a signed `Cf-Access-Jwt-Assertion` header to every request it lets through.
+4. The Worker wrapper verifies that header (signature against `<ACCESS_TEAM_DOMAIN>/cdn-cgi/access/certs`, `iss`, `aud` = `ACCESS_AUD`, `exp`, `nbf`) and checks the email equals `OWNER_EMAIL`. A missing or invalid token is 401; a valid token for another email is 403; missing configuration is a generic 500. All of this happens before any dispatch.
+5. Worker routes `/api/*` (except `/api/inngest`) to shared Hono app, with the `/api` prefix removed.
 6. Worker routes all other paths to Next.js via generated `worker.fetch()`.
-7. Next.js pages read identity via `getCloudflareContext().ctx.access.getIdentity()` (request-local).
+7. Both receive an execution context whose `access.getIdentity()` returns the verified identity, so the shared API's authorization and Next.js (`getCloudflareContext().ctx.access.getIdentity()`) read it the same way, per request.
+
+**Why the token is verified in code (2026-11-20):** OpenNext deploys with Static Assets, and Cloudflare's documentation states that `ctx.access` is not passed to a Worker with Static Assets. See the technology decisions steering document.
 
 **Same-Origin Benefits:**
 - No cross-domain cookie forwarding required
@@ -124,10 +128,12 @@ ReflectionFeed includes admin functionality for:
 "use server";
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { importMarkdownContent } from "@recallfeed/api/services/import";
+import { createDb } from "@recallfeed/database";
+import { FeedEngine } from "@recallfeed/feed-engine";
 
 export async function importMarkdownAction(formData: FormData) {
-  // Verify owner identity (already validated in Worker wrapper)
+  // The Worker wrapper has already verified the Access token and the owner;
+  // this re-check fails closed if the action is ever reached another way.
   const cfContext = getCloudflareContext();
   const identity = await cfContext.ctx.access?.getIdentity();
   
@@ -135,21 +141,16 @@ export async function importMarkdownAction(formData: FormData) {
     throw new Error("Unauthorized");
   }
   
-  const file = formData.get("file") as File;
-  if (!file) {
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
     throw new Error("No file provided");
   }
   
   const content = await file.text();
   
   // Call shared business logic directly (no HTTP)
-  const result = await importMarkdownContent(
-    cfContext.env.DATABASE_URL,
-    content,
-    { userId: identity.email }
-  );
-  
-  return result;
+  const engine = new FeedEngine(createDb(cfContext.env.DATABASE_URL));
+  return engine.importMarkdown(content, { name: file.name });
 }
 ```
 
@@ -193,7 +194,7 @@ Sample seed script: `apps/reflection-feed/scripts/seed.ts`
 ## Acceptance Criteria
 
 - [ ] Next.js app deploys as single Worker via `@opennextjs/cloudflare` adapter.
-- [ ] Worker wrapper validates owner before both Hono and Next.js dispatch (after webhook exception).
+- [ ] Worker wrapper verifies the `Cf-Access-Jwt-Assertion` token (signature, `iss`, `aud`, `exp`, `nbf`) and checks the owner before both Hono and Next.js dispatch (after webhook exception). Missing configuration fails closed.
 - [ ] Worker wrapper strips `/api` prefix before dispatching to Hono.
 - [ ] Unauthenticated requests receive 401 or redirect to Access login.
 - [ ] Authenticated non-owner requests receive 403 before reaching pages or Server Actions.
