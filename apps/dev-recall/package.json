@@ -1,0 +1,36 @@
+{
+  "name": "dev-recall",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "description": "DevRecall: the public RecallFeed demo. A read-only React + Vite feed of programming notes, deployed to Cloudflare Pages and reading the shared API Worker.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "test": "vitest run",
+    "seed": "tsx scripts/seed.ts",
+    "admin": "tsx scripts/admin.ts",
+    "dev:api": "wrangler dev --config wrangler.local.toml --port 8788"
+  },
+  "dependencies": {
+    "@recallfeed/client": "workspace:*",
+    "@recallfeed/core": "workspace:*",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@recallfeed/api": "workspace:*",
+    "@recallfeed/database": "workspace:*",
+    "@recallfeed/feed-engine": "workspace:*",
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "tailwindcss": "^4.3.5",
+    "vite": "^8.3.8",
+    "wrangler": "4.162.0"
+  }
+}

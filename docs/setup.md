@@ -60,6 +60,26 @@ Static Assets, and OpenNext always uses them. See `.kiro/steering/technology-dec
 
 **Do not enable Smart Placement** on this Worker. Users report that it drops the Access context.
 
+## Deploy DevRecall (public, React + Vite on Cloudflare Pages)
+
+DevRecall is two deployments: the API Worker (the same shared code as every deployment) and the React app.
+Not yet run live; these are the planned steps, to be corrected after the first deployment.
+
+1. **Neon.** A second project, separate from ReflectionFeed's. Copy the direct connection string.
+2. **Migrate and seed**, as in the ReflectionFeed steps, then `pnpm --filter dev-recall seed`
+   (it imports the sample notes and publishes them).
+3. **API Worker.** In `apps/dev-recall`: `pnpm exec wrangler deploy`, then `pnpm exec wrangler secret put DATABASE_URL`
+   and `pnpm exec wrangler secret put API_SECRET_KEY` (pick a long random key and keep it to yourself).
+   No Cloudflare Access: public reads need none, and writes need the key.
+4. **React app.** Build with the Worker's address: `VITE_API_URL=https://dev-recall-api.<you>.workers.dev pnpm --filter dev-recall build`,
+   then create a Cloudflare Pages project and upload `apps/dev-recall/dist`.
+5. **CORS.** Put the Pages address in `CORS_ALLOWED_ORIGINS` in `apps/dev-recall/wrangler.toml` (exact origin, no
+   trailing slash), then `wrangler deploy` again. Without it the browser blocks the app's reads.
+6. **Check.** The Pages address shows the feed. A write without the key is 401. No file in the build contains
+   the key.
+
+The admin CLI (`pnpm --filter dev-recall admin ...`) needs `API_URL` and `API_SECRET_KEY` in its environment.
+
 ## Local preview (ReflectionFeed)
 
 1. Create a local database and migrate it: `DATABASE_URL=postgres://postgres:postgres@db.localtest.me:5432/<db> pnpm --filter @recallfeed/database db:migrate`.
