@@ -1756,7 +1756,7 @@ Branch `feat/gate3-client-and-card-types` from `cf4be4c` (updated main, not stac
 ## DevRecall (Nov 23-24 work, started 2026-11-21)
 
 Branch `feat/gate3-dev-recall` from `6d8e2a2` (main after PR #7). Treehouse slot 7, lease
-`0166ffd154abb3ccaf1897545d86a963`. Local only; not pushed or deployed.
+`0166ffd154abb3ccaf1897545d86a963`. Pushed as private draft PR #8 (not merged); not deployed.
 
 - **Opt-in CORS in the shared API (`eada8b7`).** A browser app on Cloudflare Pages reading a Worker on another
   origin is blocked without CORS, and Spec 09 did not cover it. `CORS_ALLOWED_ORIGINS` (exact origins, or `*`)
@@ -1778,12 +1778,25 @@ Branch `feat/gate3-dev-recall` from `6d8e2a2` (main after PR #7). Treehouse slot
   401; a wrong key is 403; a preflight asking for `x-api-key` is refused.
 - **Gate:** lint, typecheck and build exit 0 (8 tasks); checker controls 9 of 9; **929 of 929 tests** (46
   files, none skipped); coverage 96.55/92.96/98.34/96.41.
-- **Spec 09 gap found (decision needed).** A public deployment's `GET /feed` lists published cards only, even
-  with the API key, and `POST /import/markdown` returns no card IDs. So the admin CLI cannot publish a card it
-  just imported, which is the flow the spec describes. The seed publishes through the database. Options for the
-  shared API: (a) return the new card IDs from the import; (b) let a key holder list unpublished cards
-  (`GET /feed?include=unpublished`); (c) a `publish` option on the import. Not changed here.
-- **Not done:** pushed; deployed. DevRecall needs its own Neon database, Worker, Pages project and the user's
+- **Spec 09 gap, resolved (option (a), decided by the user on Firstmate's recommendation).** `POST /import/markdown`
+  now also returns `feedItemIds`, the IDs of the cards the import created.
+  - **Contract:** only new cards are listed, the list always has `feedItemsCreated` entries, a repeat import
+    returns `[]`, and the public feed is unchanged. Listing unpublished cards was deferred until there is a
+    concrete need to find older drafts or recover interrupted imports.
+  - **Shared packages (`5b65fb1`):** `createFeedItems` (engine), the route, the client (which refuses a response
+    without the field instead of reporting an empty list), Spec 05 and the READMEs. 9 of 9 mutants caught.
+  - **DevRecall CLI (`91b30a6`):** `import --publish` publishes what it created through the existing review
+    endpoint, and `publish <id>` publishes one card. Without `--publish`, `import` prints the new IDs, because a
+    repeat import returns none. A failure partway reports what was published and what to retry. The publish loop
+    has 7 tests, and 7 of 7 mutants were caught.
+  - **Verified against the local API and database:** without `--publish` the public saw none of the new cards;
+    `publish <id>` exposed exactly that card; `import --publish` exposed both; a repeat import created and
+    published nothing; a wrong key was 403 and an unknown ID was 404.
+  - **Gate:** lint, typecheck and build exit 0 (8 tasks); checker controls 9 of 9; **948 of 948 tests** (47 files,
+    none skipped); coverage 96.56/92.98/98.36/96.42. One test of mine failed first, because it looked for a new
+    card in the first 50 of a shared database ordered oldest-first. I dated the test's cards before everything
+    else, as other tests do; the feature was not at fault.
+- **Not done:** deployed. DevRecall needs its own Neon database, Worker, Pages project and the user's
   approval. `summary` and `code_snippet` cards do not exist yet, so DevRecall's imports create `original`
   cards only.
 

@@ -78,7 +78,8 @@ Not yet run live; these are the planned steps, to be corrected after the first d
 6. **Check.** The Pages address shows the feed. A write without the key is 401. No file in the build contains
    the key.
 
-The admin CLI (`pnpm --filter dev-recall admin ...`) needs `API_URL` and `API_SECRET_KEY` in its environment.
+The admin CLI (`pnpm --filter dev-recall admin ...`) needs `API_URL` and `API_SECRET_KEY` in its environment. Imported
+cards start unpublished: add `--publish` to publish them in the same step, or `publish <id>` for one card.
 
 ## Local preview (ReflectionFeed)
 
