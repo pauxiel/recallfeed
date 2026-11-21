@@ -382,6 +382,67 @@ describe.skipIf(databaseUrl === "")("POST /import/markdown (real PostgreSQL thro
       expect((await json(response)).code).toBe("NOT_FOUND_ROUTE");
     }
   });
+
+  describe("DEFAULT_CARD_TYPES: which cards an import creates", () => {
+    async function cardTypes(sourceId: string): Promise<string[]> {
+      const rows = await testDb().query(
+        "SELECT f.card_type FROM feed_items f JOIN notes n ON n.id = f.note_id WHERE f.source_id = $1 ORDER BY n.title, f.card_type DESC",
+        [sourceId],
+      );
+      return rows.map((row) => String(row.card_type));
+    }
+    const text = (name: string) => `# A ${name}\n\n> a quoted line ${name}\n\n# B ${name}\n\nNothing to highlight.`;
+
+    it("unset creates original cards only, as before", async () => {
+      const name = uniqueName("ct-unset");
+      const body = await json(await call("/import/markdown", jsonPost({ content: text(name), name }), publicEnv()));
+
+      expect(body.feedItemsCreated).toBe(2);
+      expect(await cardTypes(String(body.sourceId))).toEqual(["original", "original"]);
+    });
+
+    it("a list with highlight creates highlight cards in the same import; types without a generator are skipped", async () => {
+      const name = uniqueName("ct-hl");
+      const env = publicEnv({ DEFAULT_CARD_TYPES: "original,highlight,reflection_prompt" });
+      const body = await json(await call("/import/markdown", jsonPost({ content: text(name), name }), env));
+
+      expect(body.feedItemsCreated).toBe(3);
+      expect(await cardTypes(String(body.sourceId))).toEqual(["original", "highlight", "original"]);
+    });
+
+    it("works the same in a private deployment for the owner", async () => {
+      const name = uniqueName("ct-priv");
+      const env = privateEnv({ DEFAULT_CARD_TYPES: "original,highlight" });
+      const response = await call(
+        "/import/markdown",
+        jsonPost({ content: text(name), name }, { Origin: APP_ORIGIN }),
+        env,
+        accessContext({ email: TEST_OWNER }),
+      );
+
+      expect(response.status).toBe(200);
+      expect((await json(response)).feedItemsCreated).toBe(3);
+    });
+
+    it("an unknown card type is a generic 500 INTERNAL_CONFIG, the value is not echoed, and nothing is written", async () => {
+      const name = uniqueName("ct-bad");
+      const response = await call("/import/markdown", jsonPost({ content: text(name), name }), publicEnv({ DEFAULT_CARD_TYPES: "original,quotez" }));
+      const raw = await response.text();
+
+      expect(response.status).toBe(500);
+      expect(JSON.parse(raw)).toEqual({ error: "Internal server error", code: "INTERNAL_ERROR" });
+      expect(raw).not.toContain("quotez");
+      expect(await sourceCount(name)).toBe(0);
+    });
+
+    it("a refused caller gets the authorization error, not the configuration error", async () => {
+      const name = uniqueName("ct-auth");
+      const response = await call("/import/markdown", jsonPost({ content: text(name), name }, {}), publicEnv({ DEFAULT_CARD_TYPES: "quotez" }));
+
+      expect(response.status).toBe(401);
+      expect((await json(response)).code).toBe("AUTH_API_KEY_MISSING");
+    });
+  });
 });
 
 /** A raw Markdown POST with the given extra headers. */

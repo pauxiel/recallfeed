@@ -1,0 +1,11 @@
+{
+  // Proves the package compiles. See packages/database/tsconfig.build.json for why there is no
+  // rootDir (the client imports @recallfeed/core's source), and why a failed compile must not write files.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "noEmitOnError": true,
+    "declaration": true,
+    "outDir": "dist"
+  }
+}

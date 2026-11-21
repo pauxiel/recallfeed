@@ -1703,16 +1703,49 @@ Treehouse slot 5, lease `1f7b074011755e10d955ce140f17c0ee`.
   seeded cards; a private window stops at the login; *Mark reviewed* set the count to 1, the card moved down,
   and the change survived a reload.
 - **Not done:** DevRecall; the client package; card-type wiring; styling; save, snooze and import in the UI.
-- **Review:** approved at `ac315e8` by the current supervisor, relayed by the user on 2026-11-21. It reviewed
-  `access-token.ts` and `dispatch.ts` directly: authentication runs before any application code, invalid or
-  foreign tokens fail safely, and the API's authorization is unchanged. It read the saved 848-test run
-  rather than rerunning it. No written review file was found in Firstmate's data at the time of recording.
-  The reviewer's name is not recorded because the verdict did not give one.
+- **Review:** approved at `ac315e8` by **Firstmate**, which made the verdict directly, relayed by the user on
+  2026-11-21. No separate written review file exists. It reviewed `access-token.ts` and `dispatch.ts`:
+  authentication runs before any application code, invalid or foreign tokens fail safely, and the API's
+  authorization is unchanged. It read the saved 848-test run rather than rerunning it. (Corrected here from
+  "the current supervisor", as the user directed. The merged head was not changed for it.)
+- **Merged:** PR #6 merged at 2026-11-21T15:56:59Z with a merge commit `cf4be4cb808917ab78780512a0760a9542ee0926`
+  (parents `bdde8c3` and `dfaf78b`; the merged tree equals `dfaf78b`). PR CI: run 44920567797, success.
+  Post-merge CI on `main`: https://github.com/pauxiel/recallfeed/actions/runs/44921870626, success, 848 of 848.
 - **Decisions:** push and a private draft PR for CI are authorized for this branch only. There is no standing
   publication permission: each push or draft PR, each merge and each deployment needs its own approval.
-  The current supervisor supervises from now on, and reviews keep going through the notifier. Approved
+  The supervisor (Firstmate) supervises from now on, and reviews keep going through the notifier. Approved
   sequence: Nov 22 the client package and highlight cards in imports; Nov 23–24 DevRecall; Nov 25–26 the
   fuller ReflectionFeed interface.
+
+---
+
+## November 22 work: client package and highlight cards in imports (2026-11-21)
+
+Branch `feat/gate3-client-and-card-types` from `cf4be4c` (updated main, not stacked). Treehouse slot 6, lease
+`4dc79de23ac47001121f84ee8c3d5641`.
+
+- **Highlight cards in normal imports (`ca65d10`).**
+  - `parseImportCardTypes` reads `DEFAULT_CARD_TYPES`: unset means `original`; `original` is always
+    included; known types without a generator are skipped; an unknown name is refused.
+  - The import route reads the setting after authorization and before the body, so a bad value is a
+    generic 500 that writes nothing.
+  - ReflectionFeed sets `original,highlight,reflection_prompt`. Its seed added 7 highlight cards to the
+    local spike data, and a second run added none.
+  - Tests: 14 parser, 3 engine and 5 API. 10 of 10 mutants caught.
+- **`@recallfeed/client` (`0be327f`).**
+  - Typed `listFeed`, `getCard`, `importMarkdown` and `review`. It depends only on core and `fetch`.
+  - Failures are `RecallFeedApiError` with the API's code and status, or `CLIENT_BAD_RESPONSE` or
+    `CLIENT_NETWORK`.
+  - An API key in a browser is refused.
+  - Tests: 19. 10 of 10 mutants caught.
+  - DevRecall is its first consumer, starting Nov 23. ReflectionFeed's server code keeps calling the engine
+    directly (Spec 08).
+- **Gate.** Lint, typecheck and build exit 0 (7 tasks); checker controls 9 of 9; **889 of 889 tests** (44
+  files, none skipped); coverage 96.47/92.74/98.32/96.32. The first build failed: the client's
+  `tsconfig.build.json` had been copied from core and kept `rootDir`. It was fixed before the commit, and
+  the fix touches the build configuration only.
+- **Not done:** pushed; deployed. The live ReflectionFeed still runs the spike version, and its Neon data
+  has no highlight cards until a redeploy and a re-seed.
 
 ---
 

@@ -1,5 +1,5 @@
 import { NotFoundError, ValidationError, isReviewAction } from "@recallfeed/core";
-import type { FeedItem, ImportResult, ReviewAction } from "@recallfeed/core";
+import type { CardType, FeedItem, ImportResult, ReviewAction } from "@recallfeed/core";
 import { connectorRegistry } from "@recallfeed/connectors";
 import {
   MAX_CANDIDATE_LIMIT,
@@ -11,7 +11,7 @@ import {
   upsertSource,
 } from "@recallfeed/database";
 import type { DbClient } from "@recallfeed/database";
-import { generateFeedItems } from "./card-generator";
+import { assertGeneratableCardTypes, generateFeedItems } from "./card-generator";
 import { decodeCursor, encodeCursor } from "./cursor";
 import { DEFAULT_STRATEGY, getStrategy } from "./strategies";
 import { assertValidImport } from "./validation";
@@ -69,26 +69,35 @@ export class FeedEngine {
   constructor(private readonly db: DbClient) {}
 
   /**
-   * Imports Markdown: source, notes, then original cards.
+   * Imports Markdown: source, notes, then cards of the requested types.
    *
    * Each step is idempotent, so a request that fails partway is safe to retry and a repeat import
    * of the same text changes nothing but timestamps. The whole import uses a fixed handful of
-   * database requests however many notes the text holds, which keeps it under the Workers
-   * subrequest limit.
+   * database requests however many notes the text holds (one more per extra card type), which keeps
+   * it under the Workers subrequest limit.
    *
    * @param content - The Markdown text, 10 bytes to 100 KB.
    * @param metadata - `name` identifies the source. Importing under the same name again reuses it,
-   * so notes deduplicate within that source and not across sources.
+   * so notes deduplicate within that source and not across sources. `cardTypes` is what
+   * `parseImportCardTypes` returns; omitted, only `original` cards are created. Re-importing with
+   * more types adds the missing cards to notes that already exist.
    * @returns Spec 05's `{ sourceId, queued, notesImported, feedItemsCreated }`.
-   * @throws ValidationError for input that fails {@link assertValidImport}.
+   * @throws ValidationError for input that fails {@link assertValidImport}, or a card type without a
+   * generator.
    */
-  async importMarkdown(content: string, metadata: { name?: string }): Promise<MarkdownImportResult> {
+  async importMarkdown(
+    content: string,
+    metadata: { name?: string; cardTypes?: readonly CardType[] },
+  ): Promise<MarkdownImportResult> {
     const input = assertValidImport(content, metadata.name);
+    const cardTypes = metadata.cardTypes ?? ["original"];
+    // Checked before the first write, so an unsupported type leaves the database untouched.
+    assertGeneratableCardTypes(cardTypes);
 
     const source = await upsertSource(this.db, { name: input.name, type: "markdown" });
     const notes = await connectorRegistry.get("markdown").import(source, { content: input.content });
     const stored = await upsertNotes(this.db, source.id, notes);
-    const feedItemsCreated = await generateFeedItems(this.db, source.id, ["original"]);
+    const feedItemsCreated = await generateFeedItems(this.db, source.id, cardTypes);
     await updateSourceSyncedAt(this.db, source.id, new Date());
 
     return { sourceId: source.id, queued: false, notesImported: stored.length, feedItemsCreated };

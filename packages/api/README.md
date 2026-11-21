@@ -20,6 +20,7 @@ claimed: the `due_review` strategy, the Notion import, Inngest, and AI. `GET /fe
 | `OWNER_EMAIL` | var or secret | Private mode: the only identity allowed. Compared case-insensitively and exactly. |
 | `API_SECRET_KEY` | secret | Public mode: the key a write must send in `X-API-Key`. |
 | `DEFAULT_RESURFACING_STRATEGY` | var, optional | The order of `GET /feed`: `recency` (unset or blank means this) or `importance`. Any other value, including `due_review`, makes `GET /feed` fail with a generic 500. |
+| `DEFAULT_CARD_TYPES` | var, optional | The card types `POST /import/markdown` creates, comma-separated, such as `original,highlight`. Unset means `original` only, and `original` is always created. Known types without a generator yet (`summary`, `reflection_prompt`, `code_snippet`) are skipped. An unknown name makes the import fail with a generic 500 before anything is written. |
 | `SNOOZE_DEFAULT_HOURS` | var, optional | Hours a `snoozed` action hides a card: a whole number from 1 to 8760. Unset means 24. A set but unusable value makes `snoozed` (only) fail with a generic 500. |
 
 ## Routes

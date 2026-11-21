@@ -16,6 +16,8 @@
   "vars": {
     "FEED_VISIBILITY": "private",
     "APP_NAME": "ReflectionFeed",
-    "DEFAULT_RESURFACING_STRATEGY": "importance"
+    "DEFAULT_RESURFACING_STRATEGY": "importance",
+    // Imports create original and highlight cards. reflection_prompt is AI-generated and is skipped until AI enrichment exists.
+    "DEFAULT_CARD_TYPES": "original,highlight,reflection_prompt"
   }
 }

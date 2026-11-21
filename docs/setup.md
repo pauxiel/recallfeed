@@ -21,6 +21,7 @@
 | `ACCESS_TEAM_DOMAIN` | secret | ReflectionFeed | `https://<team-name>.cloudflareaccess.com`, with no trailing slash. |
 | `ACCESS_AUD` | secret | ReflectionFeed | The AUD tag of the Access application protecting the Worker. |
 | `DEFAULT_RESURFACING_STRATEGY` | var | API | `recency` (default) or `importance`. Anything else is a 500 on `GET /feed`. |
+| `DEFAULT_CARD_TYPES` | var | API, apps | Card types an import creates, e.g. `original,highlight`. Unset means `original` only. Types without a generator are skipped; an unknown name is a 500. |
 | `SNOOZE_DEFAULT_HOURS` | var | API | Whole number 1 to 8760, default 24. |
 | `APP_NAME` | var | apps | Display name. |
 
