@@ -1802,6 +1802,42 @@ Branch `feat/gate3-dev-recall` from `6d8e2a2` (main after PR #7). Treehouse slot
 
 ---
 
+## DevRecall deployment (2026-11-21)
+
+PR #8 merged first: `c581d235b6586fb95aa197264ab5198f2f1cfb0e` (parents `6d8e2a2` and `52eb97e`; merged tree equals
+`52eb97e`). Main CI [44941803357](https://github.com/pauxiel/recallfeed/actions/runs/44941803357): success, including
+the "every test ran" check. Branch `chore/deploy-dev-recall` from that merge. Local only; not pushed.
+
+- **Live:**
+  - **App:** https://dev-recall.pages.dev (Cloudflare Pages project `dev-recall`).
+  - **API:** https://dev-recall-api.obayuwanap.workers.dev (Worker `dev-recall-api`, version `dd9ccbfe`).
+  - **Database:** its own Neon project. The user ran `db:migrate` and the seed in their terminal, and stored
+    `DATABASE_URL` themselves.
+  - **Admin key:** generated and stored by me, unseen, on the Worker and in the git-ignored `apps/dev-recall/.env`.
+- **Same account, separate resources.** The skeleton rule needs a separate Worker name and database, not a
+  separate Cloudflare account. No Zero Trust or Access is used.
+- **Checked live:**
+  - **API before the database:** reads gave a generic 500, a missing key 401, a wrong key 403, and only the Pages
+    origin got the CORS header.
+  - **API after the database:** 12 published cards with exactly the six public fields, from DevRecall's own data
+    and none of ReflectionFeed's.
+  - **Page in headless Chrome:** the Pages address rendered 12 cards, ended at "end of feed", showed no error
+    state and no stray markup characters.
+  - **Bundle:** the uploaded files contain no key value, `API_SECRET_KEY`, `DATABASE_URL` or Neon address.
+  - **Admin CLI against the live API with the real key:**
+    - an import was invisible to the public;
+    - `publish` made exactly that card visible (13 cards);
+    - `review ... unpublished` hid it again (12 cards);
+    - a wrong key was 403;
+    - a preflight asking to send the key from a browser was refused.
+- **Left behind:** one unpublished test card (`a5c83bc1…`), invisible to the public. The API has no delete.
+- **Changed:** `CORS_ALLOWED_ORIGINS` in `apps/dev-recall/wrangler.toml` is now the Pages address, and
+  `docs/setup.md` records the steps that were actually run.
+- **Not done:** pushed; reviewed; `summary` and `code_snippet` cards (DevRecall's imports create `original` cards only);
+  the live ReflectionFeed still runs the spike version, with no highlight cards and no *Mark reviewed* change since.
+
+---
+
 ## Phase 5: Source Management (Tasks 29-30)
 
 **Note:** CSRF/cache protection moved to Task 18 (Phase 2)
