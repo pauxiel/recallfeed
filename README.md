@@ -12,7 +12,7 @@ share, with the `.kiro/` specs, steering and hooks that guided the build kept in
 | App | What it is | Address |
 |---|---|---|
 | **DevRecall** | A public, read-only feed of programming notes, code snippets and architecture decisions. Anyone can read it. | https://dev-recall.pages.dev |
-| **ReflectionFeed** | A private feed for sermon notes, book highlights and personal reflections. Only its owner can sign in, so you cannot open it. It is shown in the demo video. | behind Cloudflare Access |
+| **ReflectionFeed** | A private feed for sermon notes, book highlights and personal reflections. Only its owner can sign in, so it cannot be opened without that login. | behind Cloudflare Access |
 
 ## What is built, and what is not
 
