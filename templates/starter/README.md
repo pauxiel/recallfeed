@@ -58,7 +58,9 @@ again and it creates nothing, because an import reports only the cards it create
    - `DEFAULT_RESURFACING_STRATEGY`: `recency` or `importance`.
    - `DEFAULT_CARD_TYPES`: which cards an import creates.
 3. **Replace the page.** Edit `public/`, or swap it for a React, Vite or Next.js frontend. The `client` package
-   (`@recallfeed/client`) is a typed way to call the API from one.
+   (`@recallfeed/client`) is a typed way to call the API from one. The starter's page shows card text as plain text, so
+   Markdown markers such as `**` appear as typed; `apps/dev-recall/src/content.ts` shows how to turn them into bold,
+   code and code blocks without ever building HTML from a note.
 4. **Add your notes** as Markdown in `seed/`, and run `pnpm seed`.
 
 ## Deploy it
