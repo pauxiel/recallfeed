@@ -1,0 +1,26 @@
+# The starter's production config: the SAME shared Worker every RecallFeed app runs
+# (packages/api/src/index.ts), plus a static page served from ./public. An app differs from the others by this
+# file's variables, never by changing the shared packages.
+#
+# Secrets (never in this file), set with `pnpm exec wrangler secret put <NAME>` in this directory:
+#   DATABASE_URL    your Neon connection string (use the direct one, without -pooler)
+#   API_SECRET_KEY  the key the seed script and any admin script send as X-API-Key for imports and publishing
+name = "my-recallfeed-app"          # change this: it becomes <name>.<your-subdomain>.workers.dev
+main = "../../packages/api/src/index.ts"
+compatibility_date = "2026-10-01"
+
+# The page and its script, styles and headers. Cloudflare serves a file from here before the Worker runs; any
+# other path (/feed, /import/markdown, ...) reaches the shared API.
+[assets]
+directory = "./public"
+
+[vars]
+APP_NAME = "My RecallFeed app"
+# "public": anyone reads published cards (six public fields only); writes need API_SECRET_KEY.
+# "private": only the owner, behind Cloudflare Access. See apps/reflection-feed for how that is wired.
+# Anything else, or unset, means private (fail closed).
+FEED_VISIBILITY = "public"
+# "recency" (oldest-seen first) or "importance" (least-reviewed first).
+DEFAULT_RESURFACING_STRATEGY = "recency"
+# Card types an import creates. "original" is always created. "highlight" adds a card for a note's first quote.
+DEFAULT_CARD_TYPES = "original,highlight"

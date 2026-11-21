@@ -1,0 +1,7 @@
+# Copy to `.dev.vars` (git-ignored) and fill in. `pnpm dev` and `pnpm seed` read it.
+# The local test database from packages/database (see the starter README) uses this URL once you create a database in it:
+DATABASE_URL=postgres://postgres:postgres@db.localtest.me:5432/recallfeed_starter
+# Any long random string for local use. For a real deployment, generate one and keep it secret.
+API_SECRET_KEY=change-me-to-a-long-random-string
+# Where the seed script reaches the API (the address `pnpm dev` prints).
+API_URL=http://127.0.0.1:8790

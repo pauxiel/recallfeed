@@ -41,6 +41,11 @@ export default defineConfig([
     },
   },
   {
+    // A starter's page script runs in the browser, not in Node or a Worker.
+    files: ["templates/*/public/**/*.js"],
+    languageOptions: { globals: globals.browser },
+  },
+  {
     // Tool configuration files and scripts run in Node.
     files: ["*.config.{js,mjs,cjs,ts}", "**/*.config.{js,mjs,cjs,ts}", "scripts/**"],
     languageOptions: { globals: globals.node },

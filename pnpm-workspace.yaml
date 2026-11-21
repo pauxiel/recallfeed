@@ -1,6 +1,7 @@
 packages:
   - "packages/*"
   - "apps/*"
+  - "templates/*"
 
 # pnpm 10 blocks dependency install scripts by default. Allow only the two
 # native-binary packages that the Workers test runtime needs.
