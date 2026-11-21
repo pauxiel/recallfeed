@@ -1719,6 +1719,36 @@ Treehouse slot 5, lease `1f7b074011755e10d955ce140f17c0ee`.
 
 ---
 
+## November 22 work: client package and highlight cards in imports (2026-11-21)
+
+Branch `feat/gate3-client-and-card-types` from `cf4be4c` (updated main, not stacked). Treehouse slot 6, lease
+`4dc79de23ac47001121f84ee8c3d5641`.
+
+- **Highlight cards in normal imports (`ca65d10`).**
+  - `parseImportCardTypes` reads `DEFAULT_CARD_TYPES`: unset means `original`; `original` is always
+    included; known types without a generator are skipped; an unknown name is refused.
+  - The import route reads the setting after authorization and before the body, so a bad value is a
+    generic 500 that writes nothing.
+  - ReflectionFeed sets `original,highlight,reflection_prompt`. Its seed added 7 highlight cards to the
+    local spike data, and a second run added none.
+  - Tests: 14 parser, 3 engine and 5 API. 10 of 10 mutants caught.
+- **`@recallfeed/client` (`0be327f`).**
+  - Typed `listFeed`, `getCard`, `importMarkdown` and `review`. It depends only on core and `fetch`.
+  - Failures are `RecallFeedApiError` with the API's code and status, or `CLIENT_BAD_RESPONSE` or
+    `CLIENT_NETWORK`.
+  - An API key in a browser is refused.
+  - Tests: 19. 10 of 10 mutants caught.
+  - DevRecall is its first consumer, starting Nov 23. ReflectionFeed's server code keeps calling the engine
+    directly (Spec 08).
+- **Gate.** Lint, typecheck and build exit 0 (7 tasks); checker controls 9 of 9; **889 of 889 tests** (44
+  files, none skipped); coverage 96.47/92.74/98.32/96.32. The first build failed: the client's
+  `tsconfig.build.json` had been copied from core and kept `rootDir`. It was fixed before the commit, and
+  the fix touches the build configuration only.
+- **Not done:** pushed; deployed. The live ReflectionFeed still runs the spike version, and its Neon data
+  has no highlight cards until a redeploy and a re-seed.
+
+---
+
 ## Phase 5: Source Management (Tasks 29-30)
 
 **Note:** CSRF/cache protection moved to Task 18 (Phase 2)
