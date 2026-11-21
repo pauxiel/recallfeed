@@ -1744,8 +1744,12 @@ Branch `feat/gate3-client-and-card-types` from `cf4be4c` (updated main, not stac
   files, none skipped); coverage 96.47/92.74/98.32/96.32. The first build failed: the client's
   `tsconfig.build.json` had been copied from core and kept `rootDir`. It was fixed before the commit, and
   the fix touches the build configuration only.
-- **Not done:** pushed; deployed. The live ReflectionFeed still runs the spike version, and its Neon data
-  has no highlight cards until a redeploy and a re-seed.
+- **Published and merged (2026-11-21).** Pushed without force and opened as private draft PR #7 (head `1c3b670`),
+  PR CI run 44928988616 passed (889 of 889). Merged as `6d8e2a2f501e4625184935f14ca6609827cee768` (parents `cf4be4c` and
+  `1c3b670`; merged tree equals `1c3b670`). Post-merge CI on `main`: run 44931579845, success, 889 of 889,
+  about 11 minutes for the test step (watch item: it was about 6 minutes before this phase).
+- **Not done:** deployed. The live ReflectionFeed still runs the spike version, and its Neon data
+  has no highlight cards until a redeploy and a re-seed. Both need the user's approval.
 
 ---
 
