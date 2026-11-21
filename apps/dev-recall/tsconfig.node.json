@@ -1,0 +1,6 @@
+{
+  // The Vite config and the admin and seed scripts run in Node, not in the browser.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": ["vite.config.ts", "vitest.config.ts", "scripts/**/*.ts"]
+}

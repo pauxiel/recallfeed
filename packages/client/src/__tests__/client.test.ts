@@ -80,7 +80,7 @@ describe("createRecallFeedClient", () => {
   });
 
   it("importMarkdown posts JSON with the content and name, and sends the API key", async () => {
-    const result = { sourceId: "s1", queued: false, notesImported: 2, feedItemsCreated: 3 };
+    const result = { sourceId: "s1", queued: false, notesImported: 2, feedItemsCreated: 3, feedItemIds: ["c1", "c2", "c3"] };
     const fetch = fakeFetch(200, result);
     const client = createRecallFeedClient({ baseUrl: "https://api.example.test", apiKey: "k-123", fetch });
 
@@ -94,11 +94,27 @@ describe("createRecallFeedClient", () => {
   });
 
   it("importMarkdown without a name sends only the content", async () => {
-    const fetch = fakeFetch(200, { sourceId: "s1", queued: false, notesImported: 1, feedItemsCreated: 1 });
+    const fetch = fakeFetch(200, { sourceId: "s1", queued: false, notesImported: 1, feedItemsCreated: 1, feedItemIds: ["c1"] });
 
     await createRecallFeedClient({ baseUrl: "/api", fetch }).importMarkdown("# One\n\nBody");
 
     expect(JSON.parse(fetch.sent[0]?.body ?? "")).toEqual({ content: "# One\n\nBody" });
+  });
+
+  it.each([
+    ["no feedItemIds (an older API)", { sourceId: "s1", queued: false, notesImported: 1, feedItemsCreated: 1 }],
+    ["feedItemIds that is not a list", { sourceId: "s1", queued: false, notesImported: 1, feedItemsCreated: 1, feedItemIds: "c1" }],
+    ["feedItemIds with a non-string", { sourceId: "s1", queued: false, notesImported: 1, feedItemsCreated: 1, feedItemIds: ["c1", 2] }],
+  ])("importMarkdown refuses a response with %s, rather than reporting no new cards", async (_label, body) => {
+    const error = await rejection(createRecallFeedClient({ baseUrl: "/api", fetch: fakeFetch(200, body) }).importMarkdown("# A\n\nB"));
+
+    expect(error.code).toBe("CLIENT_BAD_RESPONSE");
+  });
+
+  it("an empty feedItemIds is a valid answer: a repeat import created nothing", async () => {
+    const body = { sourceId: "s1", queued: false, notesImported: 1, feedItemsCreated: 0, feedItemIds: [] };
+
+    expect(await createRecallFeedClient({ baseUrl: "/api", fetch: fakeFetch(200, body) }).importMarkdown("# A\n\nB")).toEqual(body);
   });
 
   it("review sends PUT /feed/:id/review with the action, plus any extra headers", async () => {

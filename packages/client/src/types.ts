@@ -35,12 +35,17 @@ export type CardPage<TCard extends PublicCard = PublicCard> = {
   nextCursor: string | null;
 };
 
-/** `POST /import/markdown`'s result (Spec 05). */
+/** `POST /import/markdown`'s result (Spec 05, plus `feedItemIds`). */
 export type ImportMarkdownResult = {
   sourceId: string;
   queued: boolean;
   notesImported: number;
   feedItemsCreated: number;
+  /**
+   * The IDs of the cards this import created, so you can publish them with `review(id, "published")`. Only
+   * new cards are listed: a repeat import returns an empty list. The length is `feedItemsCreated`.
+   */
+  feedItemIds: string[];
 };
 
 /** `PUT /feed/:id/review`'s result: the fields a review action can change. */

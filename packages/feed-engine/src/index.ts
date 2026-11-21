@@ -17,7 +17,7 @@ export {
   isPageableStrategyName,
 } from "./strategies";
 export type { IPageableStrategy, PageableStrategyName } from "./strategies";
-export { generateFeedItems } from "./card-generator";
+export { createFeedItems, generateFeedItems } from "./card-generator";
 export { CARD_TYPES, IMPORT_CARD_TYPES, parseImportCardTypes } from "./card-types";
 export { generateHighlightCard, extractHighlight } from "./generators/highlight";
 export { generateOriginalCard } from "./generators/original";

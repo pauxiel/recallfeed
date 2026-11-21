@@ -24,7 +24,7 @@ describe.skipIf(databaseUrl === "")("FeedEngine (real PostgreSQL through the pro
       const name = uniqueName("happy");
       const result = await new FeedEngine(db).importMarkdown(doc(name), { name });
 
-      expect(Object.keys(result).sort()).toEqual(["feedItemsCreated", "notesImported", "queued", "sourceId"]);
+      expect(Object.keys(result).sort()).toEqual(["feedItemIds", "feedItemsCreated", "notesImported", "queued", "sourceId"]);
       expect(result).toMatchObject({ queued: false, notesImported: 2, feedItemsCreated: 2 });
       expect(await counts(result.sourceId)).toEqual({ notes: 2, cards: 2 });
 
@@ -36,6 +36,47 @@ describe.skipIf(databaseUrl === "")("FeedEngine (real PostgreSQL through the pro
       expect(cards.every((card) => card.is_ai_generated === false)).toBe(true);
       expect(cards.every((card) => card.is_published === false)).toBe(true);
       expect(cards.every((card) => card.review_count === 0)).toBe(true);
+    });
+
+    it("feedItemIds lists exactly the cards this import created: the same IDs as the new rows, as many as feedItemsCreated", async () => {
+      const db = testDb();
+      const name = uniqueName("ids");
+
+      const result = await new FeedEngine(db).importMarkdown(doc(name), { name });
+      const rows = await db.query("SELECT id FROM feed_items WHERE source_id = $1", [result.sourceId]);
+
+      expect(result.feedItemIds).toHaveLength(result.feedItemsCreated);
+      expect(new Set(result.feedItemIds).size).toBe(2);
+      expect([...result.feedItemIds].sort()).toEqual(rows.map((row) => String(row.id)).sort());
+      expect(result.feedItemIds.every((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id))).toBe(true);
+    });
+
+    it("a repeat import lists no IDs, and an import that adds one section lists only the new card", async () => {
+      const db = testDb();
+      const name = uniqueName("ids2");
+      const engine = new FeedEngine(db);
+
+      const first = await engine.importMarkdown(doc(name), { name });
+      const repeat = await engine.importMarkdown(doc(name), { name });
+      const grown = await engine.importMarkdown(`${doc(name)}\n\n# Third ${name}\n\nBody of the third note ${name}.`, { name });
+      const rows = await db.query("SELECT id FROM feed_items WHERE source_id = $1", [first.sourceId]);
+
+      expect(repeat.feedItemIds).toEqual([]);
+      expect(grown.feedItemIds).toHaveLength(1);
+      expect(first.feedItemIds).not.toContain(grown.feedItemIds[0]);
+      expect(rows.map((row) => String(row.id))).toContain(grown.feedItemIds[0]);
+    });
+
+    it("with several card types, feedItemIds lists the cards of every type", async () => {
+      const db = testDb();
+      const name = uniqueName("ids3");
+
+      const result = await new FeedEngine(db).importMarkdown(`# Q ${name}\n\n> a quoted line ${name}`, { name, cardTypes: ["original", "highlight"] });
+      const rows = await db.query("SELECT id, card_type FROM feed_items WHERE source_id = $1 ORDER BY card_type", [result.sourceId]);
+
+      expect(result.feedItemIds).toHaveLength(2);
+      expect(rows.map((row) => row.card_type)).toEqual(["highlight", "original"]);
+      expect([...result.feedItemIds].sort()).toEqual(rows.map((row) => String(row.id)).sort());
     });
 
     it("each card is a one-to-one copy of its note content", async () => {
@@ -178,7 +219,8 @@ describe.skipIf(databaseUrl === "")("FeedEngine (real PostgreSQL through the pro
       const second = await countHttpRequests(() => engine.importMarkdown(text, { name }));
 
       expect(first.result).toMatchObject({ notesImported: 300, feedItemsCreated: 300 });
-      expect(second.result).toMatchObject({ notesImported: 300, feedItemsCreated: 0 });
+      expect(first.result.feedItemIds).toHaveLength(300);
+      expect(second.result).toMatchObject({ notesImported: 300, feedItemsCreated: 0, feedItemIds: [] });
       console.log(`SUBREQUESTS: first import of 300 notes = ${first.requests} HTTP requests; repeat import = ${second.requests}`);
       expect(first.requests).toBeLessThanOrEqual(6);
       expect(second.requests).toBeLessThanOrEqual(6);

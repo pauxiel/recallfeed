@@ -1744,8 +1744,61 @@ Branch `feat/gate3-client-and-card-types` from `cf4be4c` (updated main, not stac
   files, none skipped); coverage 96.47/92.74/98.32/96.32. The first build failed: the client's
   `tsconfig.build.json` had been copied from core and kept `rootDir`. It was fixed before the commit, and
   the fix touches the build configuration only.
-- **Not done:** pushed; deployed. The live ReflectionFeed still runs the spike version, and its Neon data
-  has no highlight cards until a redeploy and a re-seed.
+- **Published and merged (2026-11-21).** Pushed without force and opened as private draft PR #7 (head `1c3b670`),
+  PR CI run 44928988616 passed (889 of 889). Merged as `6d8e2a2f501e4625184935f14ca6609827cee768` (parents `cf4be4c` and
+  `1c3b670`; merged tree equals `1c3b670`). Post-merge CI on `main`: run 44931579845, success, 889 of 889,
+  about 11 minutes for the test step (watch item: it was about 6 minutes before this phase).
+- **Not done:** deployed. The live ReflectionFeed still runs the spike version, and its Neon data
+  has no highlight cards until a redeploy and a re-seed. Both need the user's approval.
+
+---
+
+## DevRecall (Nov 23-24 work, started 2026-11-21)
+
+Branch `feat/gate3-dev-recall` from `6d8e2a2` (main after PR #7). Treehouse slot 7, lease
+`0166ffd154abb3ccaf1897545d86a963`. Pushed as private draft PR #8 (not merged); not deployed.
+
+- **Opt-in CORS in the shared API (`eada8b7`).** A browser app on Cloudflare Pages reading a Worker on another
+  origin is blocked without CORS, and Spec 09 did not cover it. `CORS_ALLOWED_ORIGINS` (exact origins, or `*`)
+  enables `Access-Control-Allow-Origin` for `GET` and `HEAD` on **public** deployments only. Never credentials,
+  never a preflight answer (so the API key cannot be used from a browser), and a private deployment never sends
+  the headers. 21 tests. 10 of 10 mutants caught.
+- **`apps/dev-recall` (`bb937b7`).** React 19, Vite 8 and Tailwind 4. It reads the public feed through
+  `@recallfeed/client` with no key. Infinite scroll with a "Load more" fallback, an error state with Retry,
+  and note text rendered as text only. The sample content is 12 notes (distributed systems, Rust, TypeScript,
+  Postgres, ADRs). The admin CLI has `import`, `review` and `list`. The seed imports and publishes.
+  19 parser tests. 11 of 11 mutants caught after one survivor led to an added test.
+- **Checked in a real browser** (headless Chrome against the real API Worker and a local database): 10 cards
+  on the first page; with a tall window the second page loads by itself and the feed ends; a stopped API shows
+  the error state with Retry; no stray markup characters. The built bundle contains no key value, no
+  `API_SECRET_KEY` and no database string. Found and fixed one bug this way: code inside bold text was shown
+  with its backticks.
+- **API check, as the browser sees it:** a listed origin gets `Access-Control-Allow-Origin` and `Vary: Origin`;
+  an unlisted origin gets nothing; a public card has exactly the six public fields; an import without a key is
+  401; a wrong key is 403; a preflight asking for `x-api-key` is refused.
+- **Gate:** lint, typecheck and build exit 0 (8 tasks); checker controls 9 of 9; **929 of 929 tests** (46
+  files, none skipped); coverage 96.55/92.96/98.34/96.41.
+- **Spec 09 gap, resolved (option (a), decided by the user on Firstmate's recommendation).** `POST /import/markdown`
+  now also returns `feedItemIds`, the IDs of the cards the import created.
+  - **Contract:** only new cards are listed, the list always has `feedItemsCreated` entries, a repeat import
+    returns `[]`, and the public feed is unchanged. Listing unpublished cards was deferred until there is a
+    concrete need to find older drafts or recover interrupted imports.
+  - **Shared packages (`5b65fb1`):** `createFeedItems` (engine), the route, the client (which refuses a response
+    without the field instead of reporting an empty list), Spec 05 and the READMEs. 9 of 9 mutants caught.
+  - **DevRecall CLI (`91b30a6`):** `import --publish` publishes what it created through the existing review
+    endpoint, and `publish <id>` publishes one card. Without `--publish`, `import` prints the new IDs, because a
+    repeat import returns none. A failure partway reports what was published and what to retry. The publish loop
+    has 7 tests, and 7 of 7 mutants were caught.
+  - **Verified against the local API and database:** without `--publish` the public saw none of the new cards;
+    `publish <id>` exposed exactly that card; `import --publish` exposed both; a repeat import created and
+    published nothing; a wrong key was 403 and an unknown ID was 404.
+  - **Gate:** lint, typecheck and build exit 0 (8 tasks); checker controls 9 of 9; **948 of 948 tests** (47 files,
+    none skipped); coverage 96.56/92.98/98.36/96.42. One test of mine failed first, because it looked for a new
+    card in the first 50 of a shared database ordered oldest-first. I dated the test's cards before everything
+    else, as other tests do; the feature was not at fault.
+- **Not done:** deployed. DevRecall needs its own Neon database, Worker, Pages project and the user's
+  approval. `summary` and `code_snippet` cards do not exist yet, so DevRecall's imports create `original`
+  cards only.
 
 ---
 

@@ -11,7 +11,7 @@ import {
   upsertSource,
 } from "@recallfeed/database";
 import type { DbClient } from "@recallfeed/database";
-import { assertGeneratableCardTypes, generateFeedItems } from "./card-generator";
+import { assertGeneratableCardTypes, createFeedItems } from "./card-generator";
 import { decodeCursor, encodeCursor } from "./cursor";
 import { DEFAULT_STRATEGY, getStrategy } from "./strategies";
 import { assertValidImport } from "./validation";
@@ -37,6 +37,12 @@ export type MarkdownImportResult = ImportResult & {
   notesImported: number;
   /** Cards this import created. Zero when every note already had its card. */
   feedItemsCreated: number;
+  /**
+   * The IDs of the cards this import created, so a caller with write access can act on them (for example
+   * publish them). It lists only new cards, never ones that already existed, and its length is always
+   * `feedItemsCreated`. A repeat import returns an empty list.
+   */
+  feedItemIds: string[];
 };
 
 /** Options for {@link FeedEngine.listFeedItems}. */
@@ -81,7 +87,7 @@ export class FeedEngine {
    * so notes deduplicate within that source and not across sources. `cardTypes` is what
    * `parseImportCardTypes` returns; omitted, only `original` cards are created. Re-importing with
    * more types adds the missing cards to notes that already exist.
-   * @returns Spec 05's `{ sourceId, queued, notesImported, feedItemsCreated }`.
+   * @returns Spec 05's `{ sourceId, queued, notesImported, feedItemsCreated }` plus `feedItemIds`.
    * @throws ValidationError for input that fails {@link assertValidImport}, or a card type without a
    * generator.
    */
@@ -97,10 +103,10 @@ export class FeedEngine {
     const source = await upsertSource(this.db, { name: input.name, type: "markdown" });
     const notes = await connectorRegistry.get("markdown").import(source, { content: input.content });
     const stored = await upsertNotes(this.db, source.id, notes);
-    const feedItemsCreated = await generateFeedItems(this.db, source.id, cardTypes);
+    const feedItemIds = await createFeedItems(this.db, source.id, cardTypes);
     await updateSourceSyncedAt(this.db, source.id, new Date());
 
-    return { sourceId: source.id, queued: false, notesImported: stored.length, feedItemsCreated };
+    return { sourceId: source.id, queued: false, notesImported: stored.length, feedItemsCreated: feedItemIds.length, feedItemIds };
   }
 
   /**

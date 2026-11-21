@@ -33,13 +33,13 @@ function jsonPost(body: unknown, headers: Record<string, string> = keyed): Reque
 
 describe.skipIf(databaseUrl === "")("POST /import/markdown (real PostgreSQL through the proxy)", { timeout: DATABASE_TEST_TIMEOUT_MS }, () => {
   describe("public deployment, X-API-Key", () => {
-    it("imports Markdown and returns exactly Spec 05's four fields", async () => {
+    it("imports Markdown and returns Spec 05's four fields plus feedItemIds", async () => {
       const name = uniqueName("pub");
       const response = await call("/import/markdown", jsonPost({ content: `# One\n\nbody ${name}\n\n# Two\n\nmore ${name}`, name }), publicEnv());
 
       expect(response.status).toBe(200);
       const body = await json(response);
-      expect(Object.keys(body).sort()).toEqual(["feedItemsCreated", "notesImported", "queued", "sourceId"]);
+      expect(Object.keys(body).sort()).toEqual(["feedItemIds", "feedItemsCreated", "notesImported", "queued", "sourceId"]);
       expect(body).toMatchObject({ queued: false, notesImported: 2, feedItemsCreated: 2 });
       expect(body.sourceId).toMatch(/^[0-9a-f-]{36}$/);
       const rows = await testDb().query(
@@ -381,6 +381,95 @@ describe.skipIf(databaseUrl === "")("POST /import/markdown (real PostgreSQL thro
       expect(response.status).toBe(404);
       expect((await json(response)).code).toBe("NOT_FOUND_ROUTE");
     }
+  });
+
+  describe("feedItemIds: acting on the cards an import just created", () => {
+    const text = (name: string) => `# A ${name}\n\nfirst body ${name}\n\n# B ${name}\n\nsecond body ${name}`;
+
+    it("lists exactly the new cards, and a repeat import lists none", async () => {
+      const name = uniqueName("ids");
+      const first = await json<{ sourceId: string; feedItemsCreated: number; feedItemIds: string[] }>(
+        await call("/import/markdown", jsonPost({ content: text(name), name }), publicEnv()),
+      );
+      const repeat = await json<{ feedItemsCreated: number; feedItemIds: string[] }>(
+        await call("/import/markdown", jsonPost({ content: text(name), name }), publicEnv()),
+      );
+      const rows = await testDb().query("SELECT id FROM feed_items WHERE source_id = $1", [first.sourceId]);
+
+      expect(first.feedItemIds).toHaveLength(first.feedItemsCreated);
+      expect([...first.feedItemIds].sort()).toEqual(rows.map((row) => String(row.id)).sort());
+      expect(repeat).toMatchObject({ feedItemsCreated: 0, feedItemIds: [] });
+    });
+
+    it("import then publish through the existing review endpoint makes exactly those cards public", async () => {
+      const name = uniqueName("flow");
+      const imported = await json<{ feedItemIds: string[] }>(await call("/import/markdown", jsonPost({ content: text(name), name }), publicEnv()));
+      const [first, second] = imported.feedItemIds;
+      // The feed is oldest-first and the shared database holds many cards. Dating both cards before every card
+      // seeded earlier puts each at the front of the list, so "published appears, unpublished does not" is
+      // decided by publishing and not by where the card falls in a page.
+      for (const id of [first, second]) {
+        await testDb().query(
+          `UPDATE feed_items
+              SET last_reviewed_at = TIMESTAMPTZ '1900-01-01' - EXTRACT(EPOCH FROM clock_timestamp()) * interval '1 second'
+            WHERE id = $1`,
+          [id],
+        );
+      }
+      const publicFeedIds = async (): Promise<string[]> =>
+        (await json<{ items: { id: string }[] }>(await call("/feed?limit=50", {}, publicEnv()))).items.map((item) => item.id);
+
+      // Before publishing, the public sees neither card, and cannot fetch either by ID.
+      expect(await publicFeedIds()).not.toContain(first);
+      expect((await call(`/feed/${first}`, {}, publicEnv())).status).toBe(404);
+
+      const published = await call(`/feed/${first}/review`, { method: "PUT", headers: { "Content-Type": "application/json", ...keyed }, body: JSON.stringify({ action: "published" }) }, publicEnv());
+
+      expect(published.status).toBe(200);
+      expect((await json(published)).isPublished).toBe(true);
+      // Only the card that was published appears. The other stays hidden.
+      const after = await publicFeedIds();
+      expect(after).toContain(first);
+      expect(after).not.toContain(second);
+      expect((await call(`/feed/${first}`, {}, publicEnv())).status).toBe(200);
+      expect((await call(`/feed/${second}`, {}, publicEnv())).status).toBe(404);
+    });
+
+    it("the IDs go only to a caller who passed the write check: refused imports reveal none", async () => {
+      const name = uniqueName("noids");
+      const noKey = await call("/import/markdown", jsonPost({ content: text(name), name }, {}), publicEnv());
+      const wrongKey = await call("/import/markdown", jsonPost({ content: text(name), name }, { "X-API-Key": "wrong" }), publicEnv());
+
+      for (const response of [noKey, wrongKey]) {
+        expect([401, 403]).toContain(response.status);
+        expect(Object.keys(await json(response)).sort()).toEqual(["code", "error"]);
+      }
+      expect(await sourceCount(name)).toBe(0);
+    });
+
+    it("the public feed and card reads do not change: they still carry the six public fields and no IDs of unpublished cards", async () => {
+      const name = uniqueName("same");
+      const imported = await json<{ feedItemIds: string[] }>(await call("/import/markdown", jsonPost({ content: text(name), name }), publicEnv()));
+      const page = await json<{ items: Record<string, unknown>[]; nextCursor: unknown }>(await call("/feed?limit=50", {}, publicEnv()));
+
+      expect(Object.keys(page).sort()).toEqual(["items", "nextCursor"]);
+      expect(page.items.every((item) => Object.keys(item).sort().join() === "cardType,content,createdAt,id,isAiGenerated,noteId")).toBe(true);
+      expect(page.items.map((item) => item.id)).not.toContain(imported.feedItemIds[0]);
+    });
+
+    it("works the same in a private deployment for the owner", async () => {
+      const name = uniqueName("privids");
+      const response = await call(
+        "/import/markdown",
+        jsonPost({ content: text(name), name }, { Origin: APP_ORIGIN }),
+        privateEnv(),
+        accessContext({ email: TEST_OWNER }),
+      );
+      const body = await json<{ feedItemsCreated: number; feedItemIds: string[] }>(response);
+
+      expect(response.status).toBe(200);
+      expect(body.feedItemIds).toHaveLength(body.feedItemsCreated);
+    });
   });
 
   describe("DEFAULT_CARD_TYPES: which cards an import creates", () => {

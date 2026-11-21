@@ -22,6 +22,7 @@
 | `ACCESS_AUD` | secret | ReflectionFeed | The AUD tag of the Access application protecting the Worker. |
 | `DEFAULT_RESURFACING_STRATEGY` | var | API | `recency` (default) or `importance`. Anything else is a 500 on `GET /feed`. |
 | `DEFAULT_CARD_TYPES` | var | API, apps | Card types an import creates, e.g. `original,highlight`. Unset means `original` only. Types without a generator are skipped; an unknown name is a 500. |
+| `CORS_ALLOWED_ORIGINS` | var | public API | Origins whose browser apps may read the feed (`https://my-app.pages.dev`, or `*`). Reads only; ignored in private mode. |
 | `SNOOZE_DEFAULT_HOURS` | var | API | Whole number 1 to 8760, default 24. |
 | `APP_NAME` | var | apps | Display name. |
 
@@ -58,6 +59,27 @@ Each step below was run for the first deployment.
 Static Assets, and OpenNext always uses them. See `.kiro/steering/technology-decisions.md`.
 
 **Do not enable Smart Placement** on this Worker. Users report that it drops the Access context.
+
+## Deploy DevRecall (public, React + Vite on Cloudflare Pages)
+
+DevRecall is two deployments: the API Worker (the same shared code as every deployment) and the React app.
+Not yet run live; these are the planned steps, to be corrected after the first deployment.
+
+1. **Neon.** A second project, separate from ReflectionFeed's. Copy the direct connection string.
+2. **Migrate and seed**, as in the ReflectionFeed steps, then `pnpm --filter dev-recall seed`
+   (it imports the sample notes and publishes them).
+3. **API Worker.** In `apps/dev-recall`: `pnpm exec wrangler deploy`, then `pnpm exec wrangler secret put DATABASE_URL`
+   and `pnpm exec wrangler secret put API_SECRET_KEY` (pick a long random key and keep it to yourself).
+   No Cloudflare Access: public reads need none, and writes need the key.
+4. **React app.** Build with the Worker's address: `VITE_API_URL=https://dev-recall-api.<you>.workers.dev pnpm --filter dev-recall build`,
+   then create a Cloudflare Pages project and upload `apps/dev-recall/dist`.
+5. **CORS.** Put the Pages address in `CORS_ALLOWED_ORIGINS` in `apps/dev-recall/wrangler.toml` (exact origin, no
+   trailing slash), then `wrangler deploy` again. Without it the browser blocks the app's reads.
+6. **Check.** The Pages address shows the feed. A write without the key is 401. No file in the build contains
+   the key.
+
+The admin CLI (`pnpm --filter dev-recall admin ...`) needs `API_URL` and `API_SECRET_KEY` in its environment. Imported
+cards start unpublished: add `--publish` to publish them in the same step, or `publish <id>` for one card.
 
 ## Local preview (ReflectionFeed)
 

@@ -1,0 +1,24 @@
+# DevRecall's API: the SAME shared Worker as every RecallFeed deployment (packages/api/src/index.ts),
+# configured as a public, read-only-for-visitors deployment. Only the variables below differ from
+# ReflectionFeed. The React app is a separate Cloudflare Pages project (see docs/setup.md).
+#
+# Secrets (never in this file), set with `pnpm exec wrangler secret put <NAME>` in this directory:
+#   DATABASE_URL    the Neon connection string of DevRecall's own database
+#   API_SECRET_KEY  the key the admin CLI sends as X-API-Key for imports and reviews
+name = "dev-recall-api"
+main = "../../packages/api/src/index.ts"
+compatibility_date = "2026-10-01"
+
+[vars]
+APP_NAME = "DevRecall"
+# Public: anonymous reads of published cards only, with the six public fields. Writes need the API key.
+FEED_VISIBILITY = "public"
+# Card types an import creates. summary needs AI and code_snippet has no generator yet, so both are skipped
+# until they exist; original is always created.
+DEFAULT_CARD_TYPES = "original,summary,code_snippet"
+# Oldest first: notes resurface in the order they were last seen.
+DEFAULT_RESURFACING_STRATEGY = "recency"
+SNOOZE_DEFAULT_HOURS = "168"
+# The browser origins that may read the feed: the Cloudflare Pages address of the DevRecall app. Set it
+# when the Pages project exists, for example "https://dev-recall.pages.dev". Empty means no browser app.
+CORS_ALLOWED_ORIGINS = ""

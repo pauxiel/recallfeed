@@ -124,7 +124,17 @@ export function createRecallFeedClient(options: RecallFeedClientOptions): Recall
     async importMarkdown(content: string, importOptions: { name?: string } = {}): Promise<ImportMarkdownResult> {
       const data = JSON.stringify(importOptions.name === undefined ? { content } : { content, name: importOptions.name });
       const result = await request("POST", "/import/markdown", { type: "application/json", data });
-      if (!isRecord(result) || typeof result.sourceId !== "string") throw badResponse(200);
+      // The client and the API ship together. An API that does not send feedItemIds is an older version, and
+      // an empty list would wrongly say "nothing was created", so it is refused. The import itself has
+      // already happened and is safe to repeat.
+      if (
+        !isRecord(result) ||
+        typeof result.sourceId !== "string" ||
+        !Array.isArray(result.feedItemIds) ||
+        !result.feedItemIds.every((id) => typeof id === "string")
+      ) {
+        throw badResponse(200);
+      }
       return result as ImportMarkdownResult;
     },
 
