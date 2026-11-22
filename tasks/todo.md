@@ -1802,6 +1802,44 @@ Branch `feat/gate3-dev-recall` from `6d8e2a2` (main after PR #7). Treehouse slot
 
 ---
 
+## Starter template (2026-11-21)
+
+Branch `feat/starter-template` from `c581d23` (main after PR #8). Local only; not pushed. Requested by the user on
+Firstmate's advice: a root README first (PR #10), then the smallest runnable starter that proves a third app can use the
+shared packages without changing them.
+
+- **`templates/starter`** is a pnpm workspace member. It has a `wrangler.toml` that runs the shared API Worker
+  (`packages/api/src/index.ts`) with its own variables, a static page in `public/` served as assets, and a seed script that
+  uses `@recallfeed/client` over HTTP. It has no custom Worker code. The page draws cards with `textContent` under a strict
+  Content-Security-Policy (`_headers`). The README gives the setup commands and how to copy it into `apps/`.
+- **Nothing under `packages/` changed** (`git diff origin/main HEAD -- packages` is empty). Root tooling changed in two places:
+  `templates/*` joined `pnpm-workspace.yaml`, and lint treats `templates/*/public/**/*.js` as browser code.
+- **Verified from a clean clone** (no `node_modules`, no `.dev.vars`), following the starter README step by step, on an empty
+  database: `pnpm install --frozen-lockfile`; the database up and a new database created; `db:migrate` printed
+  `applied 001_initial.sql`; `pnpm dev` started on 8790; `pnpm seed` created 6 cards and published them, and a second run created
+  none; `GET /` returned the page with the CSP, `nosniff` and `no-referrer` headers; `GET /feed` returned 6 cards with exactly
+  the six public fields; an import without a key was 401. **In headless Chrome** the page drew all 6 cards and ended at
+  "end of feed".
+- **Production config:** `wrangler deploy --dry-run` bundles the same 383 KiB Worker as DevRecall, and a copy of the starter at
+  `apps/my-app` bundles identically, which supports the README's "copy it into `apps/`" step. Nothing was deployed.
+- **Gate:** lint, typecheck (9 tasks) and build (8 tasks) exit 0; checker controls 9 of 9; **948 of 948 tests**, none skipped;
+  coverage 96.56/92.98/98.36/96.42. The starter adds no tests of its own: it is configuration, a static page and a script,
+  covered by the clean-clone run.
+- **Bug found in shared code (not fixed here).** `extractHighlight` blanks inline code inside emphasized text, so a bold line
+  holding backticks gives a highlight card with gaps where the code was: `**Change \`a\`, replace \`b\`.**` becomes
+  `Change     , replace    .`. It would also affect any technical note. The starter's sample note avoids the trigger. It needs
+  its own fix in `packages/feed-engine` with tests, and a decision on the sample "is" highlight in ReflectionFeed's seed.
+- **Mistake and recovery.** I ran `db:test:up` from a clone under `/tmp`. Compose recreated the shared test database container
+  with that path as its mount, and the new container failed because Docker cannot mount `/tmp`. The data was in memory, so my
+  local scratch databases (`recallfeed_spike`, `recallfeed_devrecall`, `recallfeed_rehearsal`) were lost along with the test
+  fixture. I restored the fixture from the real workspace and restarted the proxy, which had not re-created its control-plane
+  table for the new container. **Neither live deployment nor either live database was touched.**
+- **Lesson for `docs`/`CONTRIBUTING.md`:** `db:test:up` is not a no-op from another checkout. The container's mount follows the
+  checkout it was last started from, so start it from the checkout you are working in.
+- **Not done:** pushed; reviewed; `code_snippet` (on hold at the user's request).
+
+---
+
 ## Phase 5: Source Management (Tasks 29-30)
 
 **Note:** CSRF/cache protection moved to Task 18 (Phase 2)

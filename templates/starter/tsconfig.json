@@ -1,0 +1,6 @@
+{
+  // The seed script runs in Node. The page script in public/ is plain JavaScript for the browser and has no build.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "lib": ["ES2022", "DOM"], "types": ["node"] },
+  "include": ["scripts/**/*.ts"]
+}

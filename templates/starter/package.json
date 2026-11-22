@@ -1,0 +1,21 @@
+{
+  "name": "starter-app",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "description": "RecallFeed starter: the smallest app that runs on the shared packages. Configuration, a static page, and a seed script. No custom Worker code.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --config wrangler.local.toml --port 8790 --ip 127.0.0.1",
+    "seed": "tsx scripts/seed.ts",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@recallfeed/client": "workspace:*"
+  },
+  "devDependencies": {
+    "@recallfeed/api": "workspace:*",
+    "wrangler": "4.162.0"
+  }
+}
