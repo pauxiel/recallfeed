@@ -22,8 +22,9 @@ share, with the `.kiro/` specs, steering and hooks that guided the build kept in
 | Two card types: `original` and `highlight` | `summary` and `reflection_prompt` (need AI), `code_snippet` |
 | Two orderings: `recency` and `importance`, with stable cursor pagination | Inngest workflows, AI enrichment |
 | Review actions: reviewed, saved and unsaved, snoozed, published and unpublished | Source management endpoints |
-| Public and private deployments from the same code | A starter template for a third app |
+| Public and private deployments from the same code | |
 | A typed client, a public read-only app, and a private app | |
+| A starter template for a third app, [`templates/starter`](templates/starter/README.md) | |
 
 ## How it fits together
 
@@ -74,6 +75,9 @@ of the same app, because Cloudflare does not give a Worker with static assets th
 | Look | Dark, terminal style | Plain serif (a design pass is still to come) |
 | Sample content | Programming notes, snippets, ADRs | Sermons, book highlights, reflections |
 
+**A third app** is a config file, a page and a seed script. [`templates/starter`](templates/starter/README.md) runs on
+the same packages and changes none of them.
+
 ## Security model
 
 - **Fail closed.** An unset or misspelled `FEED_VISIBILITY` means private.
@@ -97,12 +101,15 @@ pnpm lint && pnpm typecheck && pnpm build
 The database-backed tests need a disposable PostgreSQL behind a Neon-compatible proxy, which runs in Docker:
 
 ```sh
-pnpm --filter @recallfeed/database db:test:up
+pnpm --filter @recallfeed/database db:test:up      # skip if the containers are already running (see the starter README)
 pnpm test:integration                  # every package; read the skipped count, it should be 0
-pnpm --filter @recallfeed/database db:test:down
+pnpm --filter @recallfeed/database db:test:down    # discards all data in the shared fixture
 ```
 
-To try an app locally, see [`apps/dev-recall/README.md`](apps/dev-recall/README.md). To deploy, follow
+**To see a feed running from a clean clone, follow [`templates/starter/README.md`](templates/starter/README.md).** It is the
+one canonical path, and it says which commands use the shared test fixture and which use an app's own database. Read its
+"Which database each command uses" first if more than one checkout of this repository is on your machine, because they
+all share the fixture. To try DevRecall locally, see [`apps/dev-recall/README.md`](apps/dev-recall/README.md). To deploy, follow
 [`docs/setup.md`](docs/setup.md), which records the steps that were actually run (still rough notes).
 
 ## Built with Kiro
@@ -126,6 +133,7 @@ security-critical code was also checked by planting bugs in it to confirm the te
 
 | | |
 |---|---|
+| Run a feed from a clean clone | [`templates/starter/README.md`](templates/starter/README.md) |
 | Architecture decisions | [`.kiro/steering/technology-decisions.md`](.kiro/steering/technology-decisions.md) |
 | The skeleton rules | [`.kiro/steering/skeleton-crew-rules.md`](.kiro/steering/skeleton-crew-rules.md) |
 | The specs | [`.kiro/specs/`](.kiro/specs/) |

@@ -5,6 +5,9 @@
 
 ## Prerequisites
 
+- **To run a feed from a clean clone,** follow [`templates/starter/README.md`](../templates/starter/README.md). It is the one
+  canonical path, and it says which commands use the shared test fixture and which use an app's own database. This file
+  covers deploying and does not repeat it.
 - Node 22.13 or later, and pnpm 10 (`corepack enable`).
 - `pnpm install` at the repository root.
 - For local tests: Docker, for the disposable PostgreSQL and Neon-compatible proxy described in
@@ -83,7 +86,8 @@ cards start unpublished: add `--publish` to publish them in the same step, or `p
 
 ## Local preview (ReflectionFeed)
 
-1. Create a local database and migrate it: `DATABASE_URL=postgres://postgres:postgres@db.localtest.me:5432/<db> pnpm --filter @recallfeed/database db:migrate`.
+1. Create a local database and migrate it, as in steps 1 and 2 of [the starter's steps](../templates/starter/README.md#steps), with
+   your own database name in place of `recallfeed_starter`. Do not run `db:test:up` from a second checkout.
 2. Create `apps/reflection-feed/.dev.vars` (git-ignored) with `DATABASE_URL=...` and `OWNER_EMAIL=...`.
 3. Run `pnpm --filter reflection-feed preview:local` and open `http://127.0.0.1:8787`. The local entry acts as
    the owner, for localhost requests only. It is never deployed.
@@ -91,4 +95,5 @@ cards start unpublished: add `--publish` to publish them in the same step, or `p
 ## Tests
 
 `pnpm test:integration`, or what CI runs: `pnpm test:coverage` with `TEST_DATABASE_URL` set. Keep the lid
-open during long runs: a closed lid sleeps the Mac and fails database tests.
+open during long runs: a closed lid sleeps the Mac and fails database tests. The fixture these tests use is shared by every
+checkout on the machine: see [which database each command uses](../templates/starter/README.md#which-database-each-command-uses).
