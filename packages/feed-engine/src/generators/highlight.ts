@@ -46,22 +46,33 @@ function firstQuote(lines: { text: string; code: boolean }[]): string | null {
   return text === "" ? null : text;
 }
 
-/** Strong then emphasis delimiters. The text must not start or end with a space, as in CommonMark. */
+/**
+ * Strong then emphasis delimiters. The text must not start or end with a space, as in CommonMark. The `d` flag
+ * gives the position of the captured text, so it can be read from the original line (see {@link emphasized}).
+ */
 const EMPHASIS = [
-  /\*\*(?! )([^*\n]+?)(?<! )\*\*/g,
-  /(?<![\p{L}\p{N}_])__(?! )([^_\n]+?)(?<! )__(?![\p{L}\p{N}_])/gu,
-  /(?<!\*)\*(?![ *])([^*\n]+?)(?<![ *])\*(?!\*)/g,
-  /(?<![\p{L}\p{N}_])_(?![ _])([^_\n]+?)(?<![ _])_(?![\p{L}\p{N}_])/gu,
+  /\*\*(?! )([^*\n]+?)(?<! )\*\*/gd,
+  /(?<![\p{L}\p{N}_])__(?! )([^_\n]+?)(?<! )__(?![\p{L}\p{N}_])/gud,
+  /(?<!\*)\*(?![ *])([^*\n]+?)(?<![ *])\*(?!\*)/gd,
+  /(?<![\p{L}\p{N}_])_(?![ _])([^_\n]+?)(?<![ _])_(?![\p{L}\p{N}_])/gud,
 ];
 
-/** Every emphasized span outside code, in document order, without repeats. */
+/**
+ * What stands in for inline code while emphasis is matched. It is not a space, so emphasis that starts or ends
+ * with code (`**`pnpm seed` loads it**`) still counts as emphasis, and it is not a letter, digit, `*` or `_`, so it
+ * neither blocks nor makes a delimiter. It is never shown: the card text is read from the original line.
+ */
+const CODE_MASK = ".";
+
+/** Every emphasized span outside code, in document order, without repeats. Inline code inside a span is kept. */
 function emphasized(lines: { text: string; code: boolean }[]): string | null {
   const spans: { at: number; text: string }[] = [];
   let offset = 0;
   for (const line of lines) {
     if (!line.code) {
-      // Inline code is not emphasis: blank it out (keeping positions) before matching.
-      const prose = line.text.replace(/`+[^`]*`+/g, (code) => " ".repeat(code.length));
+      // Inline code is not emphasis, so a `*` or `_` inside it must not pair with anything. Match on a copy where
+      // each code span is masked (same length, so positions line up), then read the text from the original line.
+      const prose = line.text.replace(/`+[^`]*`+/g, (code) => CODE_MASK.repeat(code.length));
       const taken = new Array<boolean>(prose.length).fill(false);
       for (const pattern of EMPHASIS) {
         for (const match of prose.matchAll(pattern)) {
@@ -71,7 +82,8 @@ function emphasized(lines: { text: string; code: boolean }[]): string | null {
             continue;
           }
           taken.fill(true, index, end);
-          const text = (match[1] as string).trim();
+          const inner = match.indices?.[1];
+          const text = inner === undefined ? "" : line.text.slice(inner[0], inner[1]).trim();
           if (text !== "") {
             spans.push({ at: offset + index, text });
           }
@@ -94,7 +106,8 @@ function emphasized(lines: { text: string; code: boolean }[]): string | null {
  * 3. Otherwise null: no highlight card. Spec 04's sketch falls back to the first long paragraph, but that
  *    would mostly repeat the original card, so a note without a quote or emphasis gets no highlight.
  *
- * Fenced code blocks and inline code are never treated as quotes or emphasis. No clock, randomness,
+ * Fenced code blocks and inline code are never treated as quotes or emphasis, but inline code inside an
+ * emphasized span stays in the highlight as written. No clock, randomness,
  * network or AI is involved, so the same note always gives the same highlight.
  *
  * @param content - A note's Markdown content.

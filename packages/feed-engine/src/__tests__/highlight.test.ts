@@ -102,6 +102,61 @@ describe("extractHighlight: code is never a highlight", () => {
   });
 });
 
+describe("extractHighlight: inline code inside emphasis keeps its text", () => {
+  it("keeps the code in the middle of a bold span (the reported bug)", () => {
+    expect(extractHighlight("**Change `wrangler.toml`, replace `public/`, and add your own notes.**")).toBe(
+      "Change `wrangler.toml`, replace `public/`, and add your own notes.",
+    );
+  });
+
+  it("keeps the code when the span starts with it, and still finds the span", () => {
+    expect(extractHighlight("**`pnpm seed` loads the sample notes.** It is safe to repeat.")).toBe("`pnpm seed` loads the sample notes.");
+  });
+
+  it("keeps the code when the span ends with it, or is only code", () => {
+    expect(extractHighlight("**Run `pnpm dev`**")).toBe("Run `pnpm dev`");
+    expect(extractHighlight("**`x`**")).toBe("`x`");
+  });
+
+  it("works for every emphasis form", () => {
+    expect(extractHighlight("__use `kind` here__")).toBe("use `kind` here");
+    expect(extractHighlight("*use `kind` here*")).toBe("use `kind` here");
+    expect(extractHighlight("_use `kind` here_")).toBe("use `kind` here");
+  });
+
+  it("keeps emphasis delimiters that sit inside the code, and is not confused by them", () => {
+    expect(extractHighlight("**use `a*b` and `**` carefully**")).toBe("use `a*b` and `**` carefully");
+    expect(extractHighlight("*see `a_b_c` now*")).toBe("see `a_b_c` now");
+  });
+
+  it("keeps the code text across several spans, in document order, without repeats", () => {
+    expect(extractHighlight("**Run `a`.** Then **run `b`.** Then **Run `a`.**")).toBe("Run `a`.\nrun `b`.");
+  });
+
+  it("keeps the original spacing of the text around the code", () => {
+    expect(extractHighlight("**a  `b`  c**")).toBe("a  `b`  c");
+  });
+
+  it("underscore emphasis directly next to inline code still counts, as it does next to any punctuation", () => {
+    expect(extractHighlight("see `a`_real_ and _real2_`b` too")).toBe("real\nreal2");
+  });
+
+  it("trims whitespace other than a space around a span's text", () => {
+    expect(extractHighlight("**\ttabbed `x`\t**")).toBe("tabbed `x`");
+  });
+
+  it("still never treats code as emphasis: emphasis marks only inside code give no highlight", () => {
+    expect(extractHighlight("run `**not bold**` and `*not em*` here")).toBeNull();
+  });
+
+  it("generateHighlightCard carries the code text into the card", () => {
+    const card = generateHighlightCard(note("## Title\n\n**Change `wrangler.toml` and `public/`.**"));
+
+    expect(card?.content).toBe("Change `wrangler.toml` and `public/`.");
+    expect(card?.cardType).toBe("highlight");
+  });
+});
+
 describe("extractHighlight: nothing to highlight", () => {
   it.each(["", "   ", "Just a plain sentence.", "# Heading only", "| a | b |\n|---|---|\n| 1 | 2 |"])(
     "returns null for %j",
