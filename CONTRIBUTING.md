@@ -1,8 +1,8 @@
 # Contributing to RecallFeed
 
-This is the working agreement for changing this repository. It is interim: the steering
-documents name `docs/setup.md` as the canonical onboarding document, and that file does not
-exist yet. Until it does, this file covers setup and workflow.
+This is the working agreement for changing this repository. The steering documents name
+`docs/setup.md` as the canonical onboarding document. It exists but is still rough notes on
+deploying, so this file covers local setup and workflow.
 
 `tasks/todo.md` is authoritative for what is planned and what state each task is in.
 The approved specifications in `.kiro/specs/` and the steering documents in `.kiro/steering/`
