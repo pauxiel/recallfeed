@@ -25,7 +25,7 @@ implement core's whole `IFeedEngine`.
 | `FeedEngine.recordReview(id, action, { snoozeHours })` | Applies one of the six review actions and logs it in one statement. Returns the updated card. Throws `ValidationError` for an unknown action or unusable `snoozeHours`, `NotFoundError` (`NOT_FOUND_FEED_ITEM`) for an unknown card. Authorization is the caller's job. |
 | `DEFAULT_SNOOZE_HOURS` | 24 (Spec 04). |
 | `generateFeedItems(db, sourceId, cardTypes)` | Creates the missing cards of `original` or `highlight`. Other types throw instead of being skipped. A note with nothing to highlight gets no highlight card. |
-| `generateHighlightCard(note)`, `extractHighlight(content)` | The highlight rule: the first blockquote; otherwise every `**strong**`, `__strong__`, `*em*` and `_em_` span in order; otherwise none. Code is never a highlight. |
+| `generateHighlightCard(note)`, `extractHighlight(content)` | The highlight rule: the first blockquote; otherwise every `**strong**`, `__strong__`, `*em*` and `_em_` span in order; otherwise none. Code is never a highlight, but inline code inside an emphasized span stays in it as written (`**Run `pnpm dev`**` gives ``Run `pnpm dev` ``). |
 | `assertValidImport(content, name?)` | The input checks, also usable by an API layer. |
 
 ## How an import behaves

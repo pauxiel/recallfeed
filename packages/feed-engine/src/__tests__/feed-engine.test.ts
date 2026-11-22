@@ -288,6 +288,32 @@ describe.skipIf(databaseUrl === "")("FeedEngine (real PostgreSQL through the pro
       expect(originals[0]?.n).toBe(3);
     });
 
+    it("an imported note with inline code inside bold text keeps that code in its highlight card, and every such note gets one", async () => {
+      const db = testDb();
+      const name = uniqueName("hlcode");
+      const markdown = [
+        `# Starter ${name}`,
+        "",
+        `**Change \`wrangler.toml\`, replace \`public/\`, and add your own notes ${name}.** Then run \`pnpm dev\`.`,
+        "",
+        `# Another ${name}`,
+        "",
+        `**\`pnpm seed\` loads the sample notes ${name}.** It is safe to repeat.`,
+      ].join("\n");
+
+      const result = await new FeedEngine(db).importMarkdown(markdown, { name, cardTypes: ["original", "highlight"] });
+      const highlights = await db.query("SELECT content FROM feed_items WHERE source_id = $1 AND card_type = 'highlight'", [result.sourceId]);
+
+      expect(result.feedItemsCreated).toBe(4);
+      // Compared as a sorted list in JavaScript, so the test does not depend on the database's collation.
+      expect(highlights.map((row) => String(row.content)).sort()).toEqual(
+        [
+          `\`pnpm seed\` loads the sample notes ${name}.`,
+          `Change \`wrangler.toml\`, replace \`public/\`, and add your own notes ${name}.`,
+        ].sort(),
+      );
+    });
+
     it("original and highlight can be generated together, and a highlight card is a separate feed item", async () => {
       const db = testDb();
       const name = uniqueName("hl2");
